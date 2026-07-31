@@ -309,6 +309,11 @@
 
         const topicOrder = 'tdtu_cafe_factory/order';
         const topicStatus = 'tdtu_cafe_factory/status';
+        
+        const topicSyncReq = 'tdtu_cafe_factory/sync_req';
+        const topicSyncRes = 'tdtu_cafe_factory/sync_res';
+        const topicHistoryBroadcast = 'tdtu_cafe_factory/history_broadcast';
+
         const client = mqtt.connect(brokerUrl, options);
 
         // Biến DOM
@@ -322,6 +327,10 @@
         const inpQty = document.getElementById('inp-qty');
         const plcConnectionBadge = document.getElementById('plc-connection');
         const lastUpdateTime = document.getElementById('last-update-time');
+        
+        // Input Doms
+        const inpW1 = document.getElementById('inp-w1');
+        const inpW2 = document.getElementById('inp-w2');
 
         // Biến logic OEE và Watchdog
         let watchdogTimer;
@@ -329,9 +338,9 @@
         let uptimeSeconds = 0;
         let totalSystemSeconds = 1; 
         let currentMw20 = 0;
+        let isPlcOnline = false;
 
-        // Biến lưu trữ lịch sử đặt lệnh (Local Storage)
-        let orderHistory = JSON.parse(localStorage.getItem('tdtu_scada_history')) || [];
+        let orderHistory = [];
 
         // Chart.js Configuration
         Chart.defaults.color = '#94a3b8';
@@ -364,7 +373,12 @@
         client.on('connect', () => {
             statusBadge.innerText = 'ONLINE';
             statusBadge.className = 'px-3 py-1 rounded border border-emerald-500/50 text-xs font-bold bg-emerald-500/20 text-emerald-400 shadow-inner';
-            client.subscribe(topicStatus);
+            
+            // Đăng ký nghe nhiều kênh (Topics)
+            client.subscribe([topicStatus, topicSyncRes, topicHistoryBroadcast]);
+            
+            // Yêu cầu đồng bộ ngay khi kết nối thành công
+            client.publish(topicSyncReq, JSON.stringify({ req: true }));
         });
 
         client.on('offline', () => {
@@ -373,9 +387,25 @@
         });
 
         client.on('message', (topic, message) => {
-            if (topic === topicStatus) {
-                try {
-                    const data = JSON.parse(message.toString());
+            try {
+                const data = JSON.parse(message.toString());
+                
+                // 1. Phản hồi Đồng bộ (Khi mới F5 web) hoặc Broadcast (Có ai đó vừa gửi lệnh)
+                if (topic === topicSyncRes || topic === topicHistoryBroadcast) {
+                    if (data.config) {
+                        inpW1.value = data.config.w1;
+                        inpW2.value = data.config.w2;
+                        inpQty.value = data.config.qty;
+                        txtTarget.innerText = data.config.qty;
+                    }
+                    if (data.history) {
+                        orderHistory = data.history;
+                        renderHistory();
+                    }
+                }
+
+                // 2. Nhận trạng thái PLC
+                if (topic === topicStatus) {
                     resetWatchdog(); // Reset timer ngay khi có data
 
                     // Cập nhật số gói
@@ -401,19 +431,23 @@
                             plcStatusText.className = 'font-bold text-rose-500 tracking-widest uppercase text-sm';
                         }
                     }
-                } catch (e) { console.error('JSON Error:', e); }
-            }
+                }
+            } catch (e) { console.error('JSON Error:', e); }
         });
 
         // Watchdog function (Feature 5)
         function resetWatchdog() {
             clearTimeout(watchdogTimer);
-            plcConnectionBadge.innerText = 'PLC: ONLINE (TỐT)';
-            plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.5)]';
+            if (!isPlcOnline) {
+                isPlcOnline = true;
+                plcConnectionBadge.innerText = 'PLC: ONLINE (TỐT)';
+                plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.5)]';
+            }
             lastUpdateTime.innerText = new Date().toLocaleTimeString('vi-VN');
 
             // Timeout sau 6s
             watchdogTimer = setTimeout(() => {
+                isPlcOnline = false;
                 plcConnectionBadge.innerText = 'PLC: MẤT KẾT NỐI!';
                 plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.8)] animate-pulse';
                 
@@ -461,29 +495,20 @@
 
         // Phát lệnh tới PLC & Lưu lịch sử
         function sendControl(startFlag, stopFlag, resetFlag) {
-            const w1Val = parseFloat(document.getElementById('inp-w1').value) || 0.0;
-            const w2Val = parseFloat(document.getElementById('inp-w2').value) || 0.0;
+            if (!isPlcOnline) {
+                // Không dùng alert, dùng fallback UI hoặc bỏ qua lệnh
+                console.warn("PLC Offline. Lệnh bị hủy.");
+            }
+
+            const w1Val = parseFloat(inpW1.value) || 0.0;
+            const w2Val = parseFloat(inpW2.value) || 0.0;
             const qtyVal = parseInt(inpQty.value) || 0;
 
+            // Gửi lệnh thô lên MQTT. Node-RED sẽ lo việc lưu lịch sử và phân phát lại.
             const payload = { start: startFlag, stop: stopFlag, reset: resetFlag, w1: w1Val, w2: w2Val, quantity: qtyVal };
             client.publish(topicOrder, JSON.stringify(payload));
             
-            let actionName = 'START';
-            if (stopFlag) actionName = 'STOP';
-            if (resetFlag) actionName = 'RESET';
-
-            const newOrder = {
-                time: new Date().toLocaleTimeString('vi-VN') + ' - ' + new Date().toLocaleDateString('vi-VN'),
-                action: actionName,
-                w1: w1Val,
-                w2: w2Val,
-                qty: qtyVal
-            };
-
-            orderHistory.unshift(newOrder);
-            if (orderHistory.length > 100) orderHistory.pop(); // Giữ 100 lệnh gần nhất
-            localStorage.setItem('tdtu_scada_history', JSON.stringify(orderHistory));
-            renderHistory();
+            // Không thao tác `localStorage` nữa
         }
 
         function renderHistory() {
@@ -497,8 +522,9 @@
 
             orderHistory.forEach(order => {
                 let badge = '';
-                if(order.action === 'START') badge = '<span class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded border border-emerald-500/30 text-xs font-bold"><i class="fa-solid fa-play mr-1"></i> START</span>';
-                else if(order.action === 'STOP') badge = '<span class="bg-rose-500/20 text-rose-400 px-3 py-1 rounded border border-rose-500/30 text-xs font-bold"><i class="fa-solid fa-stop mr-1"></i> STOP</span>';
+                // Chú ý: Backend Node-RED gửi về field 'command' thay vì 'action'
+                if(order.command === 'START') badge = '<span class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded border border-emerald-500/30 text-xs font-bold"><i class="fa-solid fa-play mr-1"></i> START</span>';
+                else if(order.command === 'STOP') badge = '<span class="bg-rose-500/20 text-rose-400 px-3 py-1 rounded border border-rose-500/30 text-xs font-bold"><i class="fa-solid fa-stop mr-1"></i> STOP</span>';
                 else badge = '<span class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded border border-amber-500/30 text-xs font-bold"><i class="fa-solid fa-rotate-right mr-1"></i> RESET</span>';
 
                 const tr = document.createElement('tr');
@@ -509,32 +535,31 @@
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-slate-200">${order.w1}</td>
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-slate-200">${order.w2}</td>
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-sky-400">${order.qty}</td>
-                    <td class="px-6 py-4 text-right"><i class="fa-solid fa-check-double text-emerald-500"></i> <span class="text-xs text-slate-400 ml-1">Đã Gửi</span></td>
+                    <td class="px-6 py-4 text-right"><i class="fa-solid fa-check-double text-emerald-500"></i> <span class="text-xs text-slate-400 ml-1">Đồng Bộ</span></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
         function clearHistory() {
-            if(confirm("Bạn có chắc chắn muốn xóa toàn bộ nhật ký điều khiển?")) {
-                orderHistory = [];
-                localStorage.removeItem('tdtu_scada_history');
-                renderHistory();
-            }
+            // Tính năng xóa tạm thời chỉ xóa ở client hiện tại. 
+            // Nếu muốn xóa trên server, cần gửi lệnh MQTT riêng.
+            orderHistory = [];
+            renderHistory();
         }
-        renderHistory();
+        renderHistory(); // Chạy lần đầu nếu rỗng
 
         // Xuất file CSV (Feature 4 - Đã fix lỗi Tiếng Việt BOM)
         function exportCSV() {
             if (orderHistory.length === 0) {
-                alert("Không có dữ liệu để xuất!"); return;
+                console.warn("Không có dữ liệu xuất"); return;
             }
             // Thêm ký tự BOM (\uFEFF) cho Excel hiểu UTF-8 Tiếng Việt
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
             csvContent += "Thời gian,Lệnh điều khiển,Trọng lượng W1 (g),Trọng lượng W2 (g),Mục tiêu (Gói)\n";
 
             orderHistory.forEach(row => {
-                csvContent += `"${row.time}",${row.action},${row.w1},${row.w2},${row.qty}\n`;
+                csvContent += `"${row.time}",${row.command},${row.w1},${row.w2},${row.qty}\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
