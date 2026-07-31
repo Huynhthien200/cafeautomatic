@@ -11,13 +11,10 @@
     <!-- Tải MQTT.js -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     
-    <!-- Tải Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <!-- Tải FontAwesome cho Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Cấu hình CSS Custom (Hiệu ứng kính, Đèn LED, Nút bấm) -->
+    <!-- Cấu hình CSS Custom -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Rajdhani:wght@600;700&display=swap');
         
@@ -73,15 +70,14 @@
 </head>
 <body class="p-2 sm:p-4 md:p-6 lg:p-8">
 
-    <div class="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div class="max-w-6xl mx-auto space-y-4 md:space-y-6">
         
         <!-- ================= HEADER VỚI LOGO TDTU ================= -->
         <header class="glass-panel rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <!-- Background vệt sáng trang trí -->
             <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -z-10"></div>
             
             <div class="flex flex-col md:flex-row items-center gap-6 z-10 w-full">
-                <!-- Wrapper chứa Logo nền trắng bo góc mềm -->
+                <!-- Wrapper chứa Logo nền trắng -->
                 <div class="bg-white p-2.5 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] shrink-0">
                     <img src="https://raw.githubusercontent.com/Huynhthien200/anh-sui/main/logo-tdtu-inkythuatso-01.jpg" alt="TDTU Logo" onerror="this.src='https://upload.wikimedia.org/wikipedia/vi/a/a2/Logo_Đại_học_Tôn_Đức_Thắng.png'" class="h-16 md:h-20 w-auto object-contain">
                 </div>
@@ -121,11 +117,11 @@
             </div>
         </div>
 
-        <!-- ================= MAIN GRID ================= -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <!-- ================= MAIN GRID (2 CỘT) ================= -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             
             <!-- PANEL 1: CÀI ĐẶT THÔNG SỐ -->
-            <div class="glass-panel rounded-2xl p-4 md:p-6 relative overflow-hidden group md:col-span-1">
+            <div class="glass-panel rounded-2xl p-4 md:p-6 relative overflow-hidden group">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-sky-400"></div>
                 <h2 class="text-lg md:text-xl font-bold text-white mb-6 flex items-center gap-2">
                     <div class="w-8 h-8 rounded bg-blue-500/20 flex items-center justify-center text-blue-400"><i class="fa-solid fa-sliders"></i></div>
@@ -160,7 +156,7 @@
                 </div>
 
                 <!-- Bảng Điều Khiển Controls -->
-                <div class="grid grid-cols-2 gap-2 md:gap-3 mt-6 md:mt-8">
+                <div class="grid grid-cols-2 gap-2 md:gap-3 mt-6">
                     <button onclick="sendControl(true, false, false)" class="btn-3d col-span-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white font-bold py-3 md:py-4 rounded-xl shadow-[0_4px_15px_rgba(16,185,129,0.3)] flex justify-center items-center gap-2 text-base md:text-lg">
                         <i class="fa-solid fa-power-off"></i> KHỞI ĐỘNG HỆ THỐNG
                     </button>
@@ -174,96 +170,65 @@
             </div>
 
             <!-- PANEL 2: GIÁM SÁT THỰC TẾ -->
-            <div class="glass-panel rounded-2xl p-4 md:p-6 flex flex-col justify-between relative overflow-hidden md:col-span-1 lg:col-span-1">
+            <div class="glass-panel rounded-2xl p-4 md:p-6 flex flex-col justify-center relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-green-400"></div>
-                <div>
-                    <h2 class="text-lg md:text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-display"></i></div>
-                        GIÁM SÁT THỰC TẾ
-                    </h2>
-                    
-                    <!-- Motor Status -->
-                    <div class="flex items-center justify-between bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 mb-8 shadow-inner">
-                        <span class="text-slate-300 font-semibold tracking-wide">Trạng thái Băng tải/Động cơ:</span>
-                        <div class="flex items-center gap-3 bg-black/30 px-4 py-2 rounded-lg">
-                            <div id="plc-led" class="w-4 h-4 rounded-full bg-rose-500 led-glow-red"></div>
-                            <span id="plc-status-text" class="font-bold text-rose-500 tracking-widest uppercase text-sm">STOPPED</span>
-                        </div>
+                
+                <h2 class="text-lg md:text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-400"><i class="fa-solid fa-display"></i></div>
+                    GIÁM SÁT THỰC TẾ
+                </h2>
+                
+                <!-- Motor Status -->
+                <div class="flex items-center justify-between bg-slate-800/80 p-4 rounded-xl border border-slate-700/50 mb-8 shadow-inner">
+                    <span class="text-slate-300 font-semibold tracking-wide">Trạng thái Băng tải:</span>
+                    <div class="flex items-center gap-3 bg-black/30 px-4 py-2 rounded-lg">
+                        <div id="plc-led" class="w-4 h-4 rounded-full bg-rose-500 led-glow-red"></div>
+                        <span id="plc-status-text" class="font-bold text-rose-500 tracking-widest uppercase text-sm">STOPPED</span>
                     </div>
                 </div>
 
                 <!-- Đếm số lượng lớn -->
-                <div class="text-center bg-gradient-to-b from-slate-800/80 to-slate-900 p-6 md:p-8 rounded-2xl border border-slate-700/50 relative shadow-2xl">
+                <div class="text-center bg-gradient-to-b from-slate-800/80 to-slate-900 p-8 rounded-2xl border border-slate-700/50 relative shadow-2xl flex-1 flex flex-col justify-center">
                     <!-- Icon chìm -->
                     <i class="fa-solid fa-box-check absolute text-8xl text-slate-700 opacity-10 -right-2 -bottom-2"></i>
                     
-                    <p class="text-slate-400 mb-3 uppercase text-xs font-bold tracking-[0.2em]">Tiến độ Đóng gói (MW20)</p>
-                    <div class="flex justify-center items-baseline gap-2 mt-2">
-                        <span id="txt-mw20" class="text-6xl md:text-8xl font-numbers font-bold text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]">0</span>
-                        <span class="text-2xl text-slate-500 font-numbers font-bold">/</span>
-                        <span id="txt-target" class="text-3xl text-slate-400 font-numbers font-bold">500</span>
+                    <p class="text-slate-400 mb-4 uppercase text-xs font-bold tracking-[0.2em]">Tiến độ Đóng gói (MW20)</p>
+                    <div class="flex justify-center items-baseline gap-2">
+                        <span id="txt-mw20" class="text-7xl md:text-8xl font-numbers font-bold text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.4)]">0</span>
+                        <span class="text-3xl text-slate-500 font-numbers font-bold">/</span>
+                        <span id="txt-target" class="text-4xl text-slate-400 font-numbers font-bold">500</span>
                     </div>
                     
                     <!-- Progress bar -->
-                    <div class="w-full bg-slate-900 rounded-full h-3 mt-8 border border-slate-700/50 p-0.5">
+                    <div class="w-full bg-slate-900 rounded-full h-4 mt-10 border border-slate-700/50 p-0.5 relative overflow-hidden">
                         <div id="progress-bar" class="bg-gradient-to-r from-emerald-500 to-sky-400 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(52,211,153,0.5)]" style="width: 0%"></div>
                     </div>
-                    <div class="text-right mt-2 text-xs text-sky-400 font-bold" id="txt-percent">0%</div>
+                    <div class="text-right mt-2 text-sm text-sky-400 font-bold" id="txt-percent">0%</div>
                 </div>
             </div>
-
-            <!-- PANEL 3: OEE DASHBOARD (Cho phép rải ngang trên Máy tính bảng) -->
-            <div class="glass-panel rounded-2xl p-4 md:p-6 flex flex-col justify-between relative overflow-hidden md:col-span-2 lg:col-span-1">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
-                <div class="flex flex-col h-full">
-                    <h2 class="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
-                        <div class="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center text-purple-400"><i class="fa-solid fa-chart-pie"></i></div>
-                        PHÂN TÍCH HIỆU SUẤT (OEE)
-                    </h2>
-                    
-                    <!-- Biểu đồ Chart.js -->
-                    <div class="relative w-48 h-48 md:w-56 md:h-56 mx-auto mt-2 drop-shadow-xl">
-                        <canvas id="oeeChart"></canvas>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
-                            <span id="oee-text" class="text-4xl font-numbers font-bold text-white">0%</span>
-                            <span class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">OEE Score</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-6 space-y-3 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                    <div class="flex justify-between text-sm items-center border-b border-slate-700/50 pb-2">
-                        <span class="text-slate-400 flex items-center gap-2"><i class="fa-solid fa-stopwatch text-sky-400"></i> Khả dụng (A):</span>
-                        <span id="txt-avail" class="text-white font-numbers text-lg font-bold">0.0%</span>
-                    </div>
-                    <div class="flex justify-between text-sm items-center pt-1">
-                        <span class="text-slate-400 flex items-center gap-2"><i class="fa-solid fa-gauge-high text-emerald-400"></i> Hiệu suất (P):</span>
-                        <span id="txt-perf" class="text-white font-numbers text-lg font-bold">0.0%</span>
-                    </div>
-                </div>
-                
-                <!-- Nút Xuất Báo Cáo -->
-                <button onclick="exportCSV()" class="btn-3d w-full mt-4 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white font-bold py-3 md:py-3.5 rounded-xl shadow-[0_4px_15px_rgba(79,70,229,0.3)] flex justify-center items-center gap-2 text-sm md:text-base">
-                    <i class="fa-solid fa-file-csv text-xl"></i> XUẤT BÁO CÁO VẬN HÀNH
-                </button>
-            </div>
-
+            
         </div>
 
         <!-- ================= LỊCH SỬ ĐẶT LỆNH ================= -->
         <div class="glass-panel rounded-2xl p-0 overflow-hidden shadow-2xl relative mt-4 md:mt-6">
             <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
             
-            <div class="p-5 border-b border-slate-700/50 bg-slate-800/30 flex justify-between items-center">
+            <div class="p-5 border-b border-slate-700/50 bg-slate-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 class="text-lg font-bold text-indigo-400 flex items-center gap-2">
                     <i class="fa-solid fa-clock-rotate-left"></i> NHẬT KÝ ĐIỀU KHIỂN (DATA LOGGER)
                 </h2>
-                <button onclick="clearHistory()" class="text-xs bg-slate-700 hover:bg-rose-600 hover:text-white transition-all text-slate-300 py-1.5 px-4 rounded-lg shadow font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-trash-can"></i> Xóa dữ liệu
-                </button>
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button onclick="exportCSV()" class="flex-1 sm:flex-none btn-3d bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white py-1.5 px-4 rounded-lg shadow text-xs font-bold flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-csv"></i> Xuất Báo Cáo
+                    </button>
+                    <button onclick="clearHistory()" class="flex-1 sm:flex-none btn-3d text-xs bg-slate-700 hover:bg-rose-600 text-slate-300 hover:text-white py-1.5 px-4 rounded-lg shadow font-semibold flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> Xóa
+                    </button>
+                </div>
             </div>
             
-            <div class="overflow-x-auto max-h-[300px] overflow-y-auto touch-pan-x touch-pan-y w-full">
+            <div class="overflow-x-auto max-h-[350px] overflow-y-auto touch-pan-x touch-pan-y w-full">
                 <table class="w-full text-sm text-left whitespace-nowrap">
                     <thead class="text-xs text-slate-400 bg-slate-900/80 uppercase sticky top-0 backdrop-blur-md z-10 shadow-md">
                         <tr>
@@ -310,6 +275,7 @@
         const topicOrder = 'tdtu_cafe_factory/order';
         const topicStatus = 'tdtu_cafe_factory/status';
         
+        // Topics Đồng bộ
         const topicSyncReq = 'tdtu_cafe_factory/sync_req';
         const topicSyncRes = 'tdtu_cafe_factory/sync_res';
         const topicHistoryBroadcast = 'tdtu_cafe_factory/history_broadcast';
@@ -325,60 +291,37 @@
         const plcLed = document.getElementById('plc-led');
         const plcStatusText = document.getElementById('plc-status-text');
         const inpQty = document.getElementById('inp-qty');
-        const plcConnectionBadge = document.getElementById('plc-connection');
-        const lastUpdateTime = document.getElementById('last-update-time');
-        
-        // Input Doms
         const inpW1 = document.getElementById('inp-w1');
         const inpW2 = document.getElementById('inp-w2');
+        const plcConnectionBadge = document.getElementById('plc-connection');
+        const lastUpdateTime = document.getElementById('last-update-time');
 
-        // Biến logic OEE và Watchdog
+        // Biến logic
         let watchdogTimer;
         let isRunning = false;
-        let uptimeSeconds = 0;
-        let totalSystemSeconds = 1; 
-        let currentMw20 = 0;
-        let isPlcOnline = false;
-
         let orderHistory = [];
 
-        // Chart.js Configuration
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.font.family = "'Inter', sans-serif";
-        const ctx = document.getElementById('oeeChart').getContext('2d');
-        const gradientGood = ctx.createLinearGradient(0, 0, 0, 200);
-        gradientGood.addColorStop(0, '#34d399'); gradientGood.addColorStop(1, '#059669');
-        
-        const oeeChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['OEE', 'Loss'],
-                datasets: [{
-                    data: [0, 100],
-                    backgroundColor: [gradientGood, '#1e293b'],
-                    borderWidth: 0,
-                    cutout: '82%',
-                    borderRadius: 5
-                }]
-            },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                animation: { duration: 500 }
-            }
+        // Cập nhật target ngay khi gõ
+        inpQty.addEventListener('input', () => { 
+            txtTarget.innerText = inpQty.value; 
+            updateProgress(parseInt(txtMW20.innerText)); 
         });
 
-        inpQty.addEventListener('input', () => { txtTarget.innerText = inpQty.value; updateOEE(); });
+        function updateProgress(currentVal) {
+            let target = parseInt(inpQty.value) || 1;
+            let percent = Math.min((currentVal / target) * 100, 100);
+            if (isNaN(percent)) percent = 0;
+            progressBar.style.width = percent + '%';
+            txtPercent.innerText = percent.toFixed(1) + '%';
+        }
 
+        // MQTT Events
         client.on('connect', () => {
             statusBadge.innerText = 'ONLINE';
             statusBadge.className = 'px-3 py-1 rounded border border-emerald-500/50 text-xs font-bold bg-emerald-500/20 text-emerald-400 shadow-inner';
             
-            // Đăng ký nghe nhiều kênh (Topics)
             client.subscribe([topicStatus, topicSyncRes, topicHistoryBroadcast]);
-            
-            // Yêu cầu đồng bộ ngay khi kết nối thành công
-            client.publish(topicSyncReq, JSON.stringify({ req: true }));
+            client.publish(topicSyncReq, JSON.stringify({ req: true })); // Yêu cầu đồng bộ khi vừa mở trang
         });
 
         client.on('offline', () => {
@@ -390,7 +333,7 @@
             try {
                 const data = JSON.parse(message.toString());
                 
-                // 1. Phản hồi Đồng bộ (Khi mới F5 web) hoặc Broadcast (Có ai đó vừa gửi lệnh)
+                // 1. Nhận dữ liệu đồng bộ
                 if (topic === topicSyncRes || topic === topicHistoryBroadcast) {
                     if (data.config) {
                         inpW1.value = data.config.w1;
@@ -404,18 +347,15 @@
                     }
                 }
 
-                // 2. Nhận trạng thái PLC
+                // 2. Nhận dữ liệu trạng thái PLC
                 if (topic === topicStatus) {
-                    resetWatchdog(); // Reset timer ngay khi có data
+                    resetWatchdog();
 
                     // Cập nhật số gói
                     if (data.mw20 !== undefined) {
-                        currentMw20 = parseInt(data.mw20);
+                        let currentMw20 = parseInt(data.mw20);
                         txtMW20.innerText = currentMw20;
-                        let target = parseInt(inpQty.value) || 1;
-                        let percent = Math.min((currentMw20 / target) * 100, 100);
-                        progressBar.style.width = percent + '%';
-                        txtPercent.innerText = percent.toFixed(1) + '%';
+                        updateProgress(currentMw20);
                     }
 
                     // Cập nhật Motor / PLC Run Status
@@ -435,23 +375,17 @@
             } catch (e) { console.error('JSON Error:', e); }
         });
 
-        // Watchdog function (Feature 5)
+        // Watchdog function (Giám sát mất kết nối PLC)
         function resetWatchdog() {
             clearTimeout(watchdogTimer);
-            if (!isPlcOnline) {
-                isPlcOnline = true;
-                plcConnectionBadge.innerText = 'PLC: ONLINE (TỐT)';
-                plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.5)]';
-            }
+            plcConnectionBadge.innerText = 'PLC: ONLINE (TỐT)';
+            plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-emerald-500 text-black shadow-[0_0_10px_rgba(16,185,129,0.5)]';
             lastUpdateTime.innerText = new Date().toLocaleTimeString('vi-VN');
 
-            // Timeout sau 6s
             watchdogTimer = setTimeout(() => {
-                isPlcOnline = false;
                 plcConnectionBadge.innerText = 'PLC: MẤT KẾT NỐI!';
                 plcConnectionBadge.className = 'px-3 py-1 rounded text-xs font-bold bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.8)] animate-pulse';
                 
-                // Đổi trạng thái mô tơ về Unknown
                 plcLed.className = 'w-4 h-4 rounded-full bg-slate-500';
                 plcStatusText.innerText = 'UNKNOWN';
                 plcStatusText.className = 'font-bold text-slate-500 tracking-widest uppercase text-sm';
@@ -459,56 +393,15 @@
             }, 6000);
         }
 
-        // OEE Real-time Calculation (Feature 1)
-        setInterval(() => {
-            totalSystemSeconds++;
-            if (isRunning) uptimeSeconds++;
-            updateOEE();
-        }, 1000);
-
-        function updateOEE() {
-            let target = parseInt(inpQty.value) || 1;
-            let availability = (uptimeSeconds / totalSystemSeconds) * 100;
-            let performance = (currentMw20 / target) * 100;
-            if (performance > 100) performance = 100;
-
-            let oee = ((availability/100) * (performance/100) * 1) * 100; // Q = 100%
-            if(isNaN(oee)) oee = 0;
-
-            document.getElementById('txt-avail').innerText = availability.toFixed(1) + '%';
-            document.getElementById('txt-perf').innerText = performance.toFixed(1) + '%';
-            document.getElementById('oee-text').innerText = oee.toFixed(0) + '%';
-
-            // Đổi màu đồ thị
-            let colorStart = '#34d399', colorEnd = '#059669'; // Tốt (Xanh)
-            if(oee < 50) { colorStart = '#fb7185'; colorEnd = '#e11d48'; } // Tệ (Đỏ)
-            else if(oee < 80) { colorStart = '#fbbf24'; colorEnd = '#d97706'; } // Tạm (Vàng)
-
-            const grad = ctx.createLinearGradient(0, 0, 0, 200);
-            grad.addColorStop(0, colorStart); grad.addColorStop(1, colorEnd);
-            
-            document.getElementById('oee-text').style.color = colorStart;
-            oeeChart.data.datasets[0].data = [oee, 100 - oee];
-            oeeChart.data.datasets[0].backgroundColor[0] = grad;
-            oeeChart.update();
-        }
-
         // Phát lệnh tới PLC & Lưu lịch sử
         function sendControl(startFlag, stopFlag, resetFlag) {
-            if (!isPlcOnline) {
-                // Không dùng alert, dùng fallback UI hoặc bỏ qua lệnh
-                console.warn("PLC Offline. Lệnh bị hủy.");
-            }
-
             const w1Val = parseFloat(inpW1.value) || 0.0;
             const w2Val = parseFloat(inpW2.value) || 0.0;
             const qtyVal = parseInt(inpQty.value) || 0;
 
-            // Gửi lệnh thô lên MQTT. Node-RED sẽ lo việc lưu lịch sử và phân phát lại.
             const payload = { start: startFlag, stop: stopFlag, reset: resetFlag, w1: w1Val, w2: w2Val, quantity: qtyVal };
             client.publish(topicOrder, JSON.stringify(payload));
-            
-            // Không thao tác `localStorage` nữa
+            // Không cần push vào mảng ở đây nữa, vì Node-RED sẽ gửi Broadcast về cho mọi người (bao gồm cả web này)
         }
 
         function renderHistory() {
@@ -522,10 +415,10 @@
 
             orderHistory.forEach(order => {
                 let badge = '';
-                // Chú ý: Backend Node-RED gửi về field 'command' thay vì 'action'
                 if(order.command === 'START') badge = '<span class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded border border-emerald-500/30 text-xs font-bold"><i class="fa-solid fa-play mr-1"></i> START</span>';
                 else if(order.command === 'STOP') badge = '<span class="bg-rose-500/20 text-rose-400 px-3 py-1 rounded border border-rose-500/30 text-xs font-bold"><i class="fa-solid fa-stop mr-1"></i> STOP</span>';
-                else badge = '<span class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded border border-amber-500/30 text-xs font-bold"><i class="fa-solid fa-rotate-right mr-1"></i> RESET</span>';
+                else if(order.command === 'RESET') badge = '<span class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded border border-amber-500/30 text-xs font-bold"><i class="fa-solid fa-rotate-right mr-1"></i> RESET</span>';
+                else badge = '<span class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded border border-blue-500/30 text-xs font-bold"><i class="fa-solid fa-sliders mr-1"></i> UPDATE</span>';
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-700/30 transition-colors';
@@ -535,31 +428,33 @@
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-slate-200">${order.w1}</td>
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-slate-200">${order.w2}</td>
                     <td class="px-6 py-4 font-numbers text-base text-center font-bold text-sky-400">${order.qty}</td>
-                    <td class="px-6 py-4 text-right"><i class="fa-solid fa-check-double text-emerald-500"></i> <span class="text-xs text-slate-400 ml-1">Đồng Bộ</span></td>
+                    <td class="px-6 py-4 text-right"><i class="fa-solid fa-check-double text-emerald-500"></i> <span class="text-xs text-slate-400 ml-1">${order.status}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
+        // Hiện tại khi làm Master Sync, để xóa lịch sử an toàn nên báo cho Node-RED xóa, 
+        // nhưng tạm thời chúng ta clear trên giao diện (sẽ quay lại nếu reload).
+        // Nếu muốn clear hẳn trên server cần tạo thêm logic Node-RED.
         function clearHistory() {
-            // Tính năng xóa tạm thời chỉ xóa ở client hiện tại. 
-            // Nếu muốn xóa trên server, cần gửi lệnh MQTT riêng.
-            orderHistory = [];
-            renderHistory();
+            if(confirm("Lưu ý: Nút này chỉ xóa hiển thị trên màn hình hiện tại.")) {
+                orderHistory = [];
+                renderHistory();
+            }
         }
-        renderHistory(); // Chạy lần đầu nếu rỗng
 
-        // Xuất file CSV (Feature 4 - Đã fix lỗi Tiếng Việt BOM)
+        // Xuất file CSV (Đã fix lỗi Tiếng Việt BOM)
         function exportCSV() {
             if (orderHistory.length === 0) {
-                console.warn("Không có dữ liệu xuất"); return;
+                alert("Không có dữ liệu để xuất!"); return;
             }
             // Thêm ký tự BOM (\uFEFF) cho Excel hiểu UTF-8 Tiếng Việt
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-            csvContent += "Thời gian,Lệnh điều khiển,Trọng lượng W1 (g),Trọng lượng W2 (g),Mục tiêu (Gói)\n";
+            csvContent += "Thời gian,Lệnh điều khiển,Trọng lượng W1 (g),Trọng lượng W2 (g),Mục tiêu (Gói),Trạng thái\n";
 
             orderHistory.forEach(row => {
-                csvContent += `"${row.time}",${row.command},${row.w1},${row.w2},${row.qty}\n`;
+                csvContent += `"${row.time}",${row.command},${row.w1},${row.w2},${row.qty},"${row.status}"\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
