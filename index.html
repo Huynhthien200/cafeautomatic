@@ -1,779 +1,1138 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TDTU WinCC SCADA - Packing Machine (With Tolerance & Sensor)</title>
+    <title>TDTU Coffee - Smart Factory & Delivery</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap');
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #c0c0c0;
-            color: #1e1e1e; 
-            min-height: 100vh;
-        }
-
-        .scada-panel { 
-            background-color: #d4d0c8; 
-            border-top: 2px solid #ffffff;
-            border-left: 2px solid #ffffff;
-            border-right: 2px solid #808080;
-            border-bottom: 2px solid #808080;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-        }
-
-        .wincc-header {
-            background: linear-gradient(to bottom, #000080, #0050b3);
-            color: white;
-            border: 2px solid #000;
-        }
-
-        .btn-scada {
-            transition: all 0.1s ease;
-            text-transform: uppercase;
-            font-weight: bold;
-            border-top: 2px solid #ffffff;
-            border-left: 2px solid #ffffff;
-            border-right: 2px solid #555555;
-            border-bottom: 2px solid #555555;
-            background-color: #e0e0e0;
-            color: black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            cursor: pointer;
-        }
-        .btn-scada:active { 
-            border-top: 2px solid #555555;
-            border-left: 2px solid #555555;
-            border-right: 2px solid #ffffff;
-            border-bottom: 2px solid #ffffff;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; color: #1e1e1e; min-height: 100vh; margin: 0; }
         
-        .btn-start { background-color: #4caf50; color: white; }
-        .btn-stop { background-color: #f44336; color: white; }
-        .btn-reset { background-color: #2196f3; color: white; }
-        .btn-export { background-color: #ffb300; color: black; }
-
+        /* SCADA Panel Admin */
+        .scada-panel { background-color: #d4d0c8; border-top: 2px solid #ffffff; border-left: 2px solid #ffffff; border-right: 2px solid #808080; border-bottom: 2px solid #808080; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+        .wincc-header { background: linear-gradient(to bottom, #000080, #0050b3); color: white; border: 2px solid #000; }
+        .btn-scada { transition: all 0.1s ease; text-transform: uppercase; font-weight: bold; border-top: 2px solid #ffffff; border-left: 2px solid #ffffff; border-right: 2px solid #555555; border-bottom: 2px solid #555555; background-color: #e0e0e0; color: black; display: flex; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; }
+        .btn-scada:active { border-top: 2px solid #555555; border-left: 2px solid #555555; border-right: 2px solid #ffffff; border-bottom: 2px solid #ffffff; }
+        .btn-start { background-color: #4caf50; color: white; } .btn-stop { background-color: #f44336; color: white; }
         .font-numbers { font-family: 'Roboto Mono', monospace; }
-
-        input[type="number"] { 
-            background-color: #ffffff; 
-            border: 2px inset #d4d0c8; 
-            color: #0000ff; 
-            padding: 4px 8px;
-            font-weight: bold;
-        }
-
-        /* ================= HIỆU ỨNG HẠT CÀ PHÊ ================= */
-        .wincc-flow {
-            width: 14px; height: 100%; margin: 0 auto; 
-            position: relative; overflow: hidden;
-        }
-
-        .wincc-flow::before {
-            content: ""; position: absolute; top: -100%; left: 0; right: 0;
-            width: 100%; height: 200%; opacity: 0; transition: opacity 0.1s;
-        }
+        input[type="number"].admin-input, input[type="text"].admin-input, input[type="password"].admin-input { background-color: #ffffff; border: 2px inset #d4d0c8; color: #0000ff; padding: 4px 8px; font-weight: bold; outline: none; width: 100%; }
         
-        .wincc-flow.active::before {
-            opacity: 1; animation: realisticFlow 0.25s linear infinite;
-        }
+        /* Giao diện User e-commerce */
+        .user-panel { background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb; overflow: hidden; padding: 1.5rem; }
+        .user-input { background-color: #f9fafb !important; border: 1px solid #d1d5db !important; border-radius: 6px !important; color: #1f2937 !important; padding: 10px 14px !important; transition: all 0.2s; outline: none; width: 100%; font-weight: 500;}
+        .user-input:focus { border-color: #1877f2 !important; box-shadow: 0 0 0 3px rgba(24,119,242,0.2) !important; }
+        .btn-order { background-color: #1877f2; color: white; border-radius: 8px; border: none; padding: 14px; font-size: 1.1rem; box-shadow: 0 2px 4px rgba(24,119,242,0.3); transition: all 0.2s; font-weight: bold; width: 100%; text-transform: uppercase; cursor: pointer;}
+        .btn-order:hover { background-color: #166fe5; transform: translateY(-1px); box-shadow: 0 4px 6px rgba(24,119,242,0.4);}
 
-        @keyframes realisticFlow { 
-            0% { transform: translateY(0); } 
-            100% { transform: translateY(50%); } 
-        }
-
-        .bag-beans-fill {
-            background-color: #3e2723;
-            background-image: 
-                radial-gradient(circle at 30% 20%, #795548 2px, transparent 2px),
-                radial-gradient(circle at 70% 60%, #4e342e 1.5px, transparent 1.5px),
-                radial-gradient(circle at 50% 80%, #8d6e63 2px, transparent 2px);
-            background-size: 12px 12px;
-        }
-
-        .flow-arabica::before {
-            background-color: #4e342e; 
-            background-image: 
-                radial-gradient(circle at 30% 20%, #8d6e63 2px, transparent 2px),
-                radial-gradient(circle at 70% 60%, #795548 2px, transparent 2px);
-            background-size: 16px 16px;
-        }
-
-        .flow-robusta::before {
-            background-color: #271612; 
-            background-image: 
-                radial-gradient(circle at 20% 30%, #4e342e 1px, transparent 1px),
-                radial-gradient(circle at 80% 50%, #3e2723 1px, transparent 1px);
-            background-size: 8px 8px;
-        }
-
-        .flow-mixed::before {
-            background-color: #3e2723; 
-            background-image: 
-                radial-gradient(circle at 30% 20%, #795548 1.5px, transparent 1.5px),
-                radial-gradient(circle at 70% 60%, #4e342e 1px, transparent 1px);
-            background-size: 12px 12px;
-        }
-
-        /* ================= WINCC 3D GRAPHICS ================= */
-        .wincc-hopper {
-            width: 100px; height: 80px;
-            background: linear-gradient(to right, #757575 0%, #f5f5f5 30%, #bdbdbd 70%, #616161 100%);
-            clip-path: polygon(0 0, 100% 0, 75% 100%, 25% 100%);
-            position: relative;
-            box-shadow: inset 0px -5px 10px rgba(0,0,0,0.5);
-            display: flex; align-items: flex-start; justify-content: center;
-        }
-
-        .wincc-weigh-tank {
-            width: 180px; height: 90px;
-            background: linear-gradient(to right, #808080 0%, #e0e0e0 50%, #808080 100%);
-            border: 2px solid #333; border-radius: 4px; position: relative; overflow: hidden;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 20;
-        }
-
-        .wincc-pipe {
-            width: 20px;
-            background: linear-gradient(to right, #a15c38 0%, #e8aa82 40%, #a15c38 100%);
-            border-left: 1px solid #3e2723; border-right: 1px solid #3e2723; position: relative;
-        }
-
-        .wincc-valve {
-            display: flex; align-items: center; justify-content: center;
-            width: 30px; height: 18px; position: relative; z-index: 10; margin: -2px 0;
-        }
-        .valve-left, .valve-right {
-            width: 0; height: 0; border-top: 9px solid transparent; border-bottom: 9px solid transparent;
-            transition: border-color 0.2s;
-        }
-        .valve-left { border-left: 15px solid #c62828; }
-        .valve-right { border-right: 15px solid #c62828; }
-        .wincc-valve.open .valve-left { border-left-color: #4ade80; }
-        .wincc-valve.open .valve-right { border-right-color: #4ade80; }
-
-        .valve-stem { position: absolute; top: -8px; width: 3px; height: 8px; background-color: #424242; }
-        .valve-handle {
-            position: absolute; top: -11px; width: 16px; height: 3px; background-color: #c62828; transition: background-color 0.2s;
-        }
-        .wincc-valve.open .valve-handle { background-color: #4ade80; }
-
-        .scada-canvas {
-            position: relative; width: 100%; height: 500px;
-            background-color: #e5e5e5; border: 2px dashed #9ca3af; overflow: hidden;
-        }
-
-        .center-axis {
-            position: absolute; left: 50%; transform: translateX(-50%);
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        .kho-bao-box {
-            position: absolute; left: calc(50% - 275px); bottom: 220px;
-            width: 100px; height: 120px; border: 2px dashed #475569; border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 14px; color: #475569;
-        }
-
-        .rotary-base {
-            position: absolute; left: calc(50% - 260px); bottom: 50px;
-            width: 70px; height: 70px;
-            background: linear-gradient(to bottom, #f1f5f9, #cbd5e1);
-            border: 2px solid #1e293b; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3); z-index: 30;
-        }
-        .rotary-base-inner {
-            width: 24px; height: 24px; border: 2px solid #1e293b; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .rotary-base-dot { width: 8px; height: 8px; background: #1e293b; border-radius: 50%; }
-
-        .rotary-arm {
-            position: absolute; left: 35px; top: 35px; 
-            transform-origin: 0% 50%;
-            transform: translateY(-50%) rotate(-90deg); 
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex; flex-direction: row; align-items: center; 
-            gap: 0px;
-            z-index: 25;
-        }
-        .rotary-arm.rotated-down { transform: translateY(-50%) rotate(0deg); }
-        
-        .arm-connector { width: 40px; height: 12px; background: #334155; }
-
-        .cyl-block {
-            width: 45px; height: 70px;
-            background: linear-gradient(to bottom, #e2e8f0, #94a3b8);
-            border: 2px solid #334155; border-radius: 4px;
-            display: flex; justify-content: center; align-items: center; position: relative;
-        }
-        .cyl-text {
-            font-size: 11px; font-weight: bold; color: #1e293b;
-            writing-mode: vertical-rl; transform: rotate(180deg);
-        }
-
-        .cylinder-rod {
-            height: 10px; background: #9ca3af;
-            border: 1px solid #4b5563; border-left: none;
-            position: absolute; top: 50%; z-index: -1;
-        }
-        .suction-cup {
-            position: absolute; right: -5px; top: -4px;
-            width: 5px; height: 18px; background: #111827; border-radius: 0 4px 4px 0;
-            transition: background-color 0.2s, box-shadow 0.2s;
-        }
-        
-        .cyl-block.vac-on .suction-cup { 
-            background-color: #00ff00 !important; 
-            box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00 !important; 
-        }
-
-        #cyl-2 .cylinder-rod {
-            width: 15px; right: -15px; 
-            transform: translate(0, -50%);
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #cyl-2 .suction-cup { display: none; } 
-        #cyl-2.push .cylinder-rod { width: 35px; right: -35px; }
-
-        #cyl-1 {
-            margin-left: 15px;
-            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #cyl-2.push ~ #cyl-1 { margin-left: 35px; }
-
-        #cyl-1 .cylinder-rod {
-            width: 25px; right: 0px; 
-            transform: translate(0px, -50%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #cyl-1.push .cylinder-rod { transform: translate(10px, -50%); }
-        #cyl-1.pull .cylinder-rod { transform: translate(2.5px, -50%); }
-
-        #dynamic-bag {
-            width: 100px; height: 110px;
-            background: linear-gradient(to right, #9e9e9e 0%, #e0e0e0 50%, #9e9e9e 100%);
-            border: 2px solid #424242; border-top: none; border-radius: 0 0 8px 8px;
-            margin-left: 15px; 
-            position: relative; overflow: hidden;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
-            display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 5px;
-            opacity: 0; 
-            transition: opacity 0.3s, width 0.3s, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #dynamic-bag.held { opacity: 1; }
-        #dynamic-bag.opened { 
-            width: 115px; 
-            margin-left: 7.5px; 
-            border-left: 4px solid #424242; border-right: 4px solid #424242; 
-        }
-        
-        .dynamic-bag-fill {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            height: 0%; transition: height 0.2s ease-out; z-index: 0;
-        }
-
-        .final-bag {
-            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 110px;
-            background: linear-gradient(to right, #9e9e9e 0%, #e0e0e0 50%, #9e9e9e 100%);
-            border: 2px solid #424242; border-top: none; border-radius: 0 0 8px 8px;
-            opacity: 0; transition: opacity 0.3s; display: flex; align-items: flex-end; overflow: hidden;
-            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
-        }
-
-        .led-screen-small {
-            background-color: #000; border: 2px inset #555;
-            color: #00ff00; font-family: 'Roboto Mono', monospace; font-weight: bold;
-            padding: 2px 6px; border-radius: 2px; text-shadow: 0 0 3px #00ff00; z-index: 10;
-        }
+        /* ================= HIỆU ỨNG ĐỒ HỌA P&ID (Chỉ Admin) ================= */
+        .wincc-flow{width:14px;height:100%;margin:0 auto;position:relative;overflow:hidden;}
+        .wincc-flow::before{content:"";position:absolute;top:-100%;left:0;right:0;width:100%;height:200%;opacity:0;transition:opacity 0.1s;}
+        .wincc-flow.active::before{opacity:1;animation:realisticFlow 0.25s linear infinite;}
+        @keyframes realisticFlow{0%{transform:translateY(0);}100%{transform:translateY(50%);}}
+        .bag-beans-fill{background-color:#3e2723;background-image:radial-gradient(circle at 30% 20%,#795548 2px,transparent 2px),radial-gradient(circle at 70% 60%,#4e342e 1.5px,transparent 1.5px),radial-gradient(circle at 50% 80%,#8d6e63 2px,transparent 2px);background-size:12px 12px;}
+        .flow-arabica::before{background-color:#4e342e;background-image:radial-gradient(circle at 30% 20%,#8d6e63 2px,transparent 2px),radial-gradient(circle at 70% 60%,#795548 2px,transparent 2px);background-size:16px 16px;}
+        .flow-robusta::before{background-color:#271612;background-image:radial-gradient(circle at 20% 30%,#4e342e 1px,transparent 1px),radial-gradient(circle at 80% 50%,#3e2723 1px,transparent 1px);background-size:8px 8px;}
+        .flow-mixed::before{background-color:#3e2723;background-image:radial-gradient(circle at 30% 20%,#795548 1.5px,transparent 1.5px),radial-gradient(circle at 70% 60%,#4e342e 1px,transparent 1px);background-size:12px 12px;}
+        .wincc-hopper{width:100px;height:80px;background:linear-gradient(to right,#757575 0%,#f5f5f5 30%,#bdbdbd 70%,#616161 100%);clip-path:polygon(0 0,100% 0,75% 100%,25% 100%);position:relative;box-shadow:inset 0px -5px 10px rgba(0,0,0,0.5);display:flex;align-items:flex-start;justify-content:center;}
+        .wincc-weigh-tank{width:180px;height:90px;background:linear-gradient(to right,#808080 0%,#e0e0e0 50%,#808080 100%);border:2px solid #333;border-radius:4px;position:relative;overflow:hidden;box-shadow:0 8px 15px rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;}
+        .wincc-pipe{width:20px;background:linear-gradient(to right,#a15c38 0%,#e8aa82 40%,#a15c38 100%);border-left:1px solid #3e2723;border-right:1px solid #3e2723;position:relative;}
+        .wincc-valve{display:flex;align-items:center;justify-content:center;width:30px;height:18px;position:relative;z-index:10;margin:-2px 0;}
+        .valve-left,.valve-right{width:0;height:0;border-top:9px solid transparent;border-bottom:9px solid transparent;transition:border-color 0.2s;}
+        .valve-left{border-left:15px solid #c62828;}.valve-right{border-right:15px solid #c62828;}
+        .wincc-valve.open .valve-left{border-left-color:#4ade80;}.wincc-valve.open .valve-right{border-right-color:#4ade80;}
+        .valve-stem{position:absolute;top:-8px;width:3px;height:8px;background-color:#424242;}
+        .valve-handle{position:absolute;top:-11px;width:16px;height:3px;background-color:#c62828;transition:background-color 0.2s;}
+        .wincc-valve.open .valve-handle{background-color:#4ade80;}
+        .scada-canvas{position:relative;width:100%;height:500px;background-color:#e5e5e5;border:2px dashed #9ca3af;overflow:hidden;border-radius: 0;}
+        .center-axis{position:absolute;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;}
+        .kho-bao-box{position:absolute;left:calc(50% - 275px);bottom:220px;width:100px;height:120px;border:2px dashed #475569;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;color:#475569;}
+        .rotary-base{position:absolute;left:calc(50% - 260px);bottom:50px;width:70px;height:70px;background:linear-gradient(to bottom,#f1f5f9,#cbd5e1);border:2px solid #1e293b;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 5px rgba(0,0,0,0.3);z-index:30;}
+        .rotary-base-inner{width:24px;height:24px;border:2px solid #1e293b;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+        .rotary-base-dot{width:8px;height:8px;background:#1e293b;border-radius:50%;}
+        .rotary-arm{position:absolute;left:35px;top:35px;transform-origin:0% 50%;transform:translateY(-50%) rotate(-90deg);transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:row;align-items:center;gap:0px;z-index:25;}
+        .rotary-arm.rotated-down{transform:translateY(-50%) rotate(0deg);}
+        .arm-connector{width:40px;height:12px;background:#334155;}
+        .cyl-block{width:45px;height:70px;background:linear-gradient(to bottom,#e2e8f0,#94a3b8);border:2px solid #334155;border-radius:4px;display:flex;justify-content:center;align-items:center;position:relative;}
+        .cyl-text{font-size:11px;font-weight:bold;color:#1e293b;writing-mode:vertical-rl;transform:rotate(180deg);}
+        .cylinder-rod{height:10px;background:#9ca3af;border:1px solid #4b5563;border-left:none;position:absolute;top:50%;z-index:-1;}
+        .suction-cup{position:absolute;right:-5px;top:-4px;width:5px;height:18px;background:#111827;border-radius:0 4px 4px 0;transition:background-color 0.2s,box-shadow 0.2s;}
+        .cyl-block.vac-on .suction-cup{background-color:#00ff00 !important;box-shadow:0 0 10px #00ff00,0 0 20px #00ff00 !important;}
+        #cyl-2-admin .cylinder-rod {width:15px;right:-15px;transform:translate(0,-50%);transition:width 0.3s cubic-bezier(0.4,0,0.2,1),right 0.3s cubic-bezier(0.4,0,0.2,1);}
+        #cyl-2-admin .suction-cup {display:none;}
+        #cyl-2-admin.push .cylinder-rod {width:35px;right:-35px;}
+        #cyl-1-admin {margin-left:15px;transition:margin-left 0.3s cubic-bezier(0.4,0,0.2,1);}
+        #cyl-2-admin.push ~ #cyl-1-admin {margin-left:35px;}
+        #cyl-1-admin .cylinder-rod {width:25px;right:0px;transform:translate(0px,-50%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);}
+        #cyl-1-admin.push .cylinder-rod {transform:translate(10px,-50%);}
+        #cyl-1-admin.pull .cylinder-rod {transform:translate(2.5px,-50%);}
+        .dynamic-bag-class {width:100px;height:110px;background:linear-gradient(to right,#9e9e9e 0%,#e0e0e0 50%,#9e9e9e 100%);border:2px solid #424242;border-top:none;border-radius:0 0 8px 8px;margin-left:15px;position:relative;overflow:hidden;box-shadow:0 5px 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding-bottom:5px;opacity:0;transition:opacity 0.3s,width 0.3s,margin-left 0.3s cubic-bezier(0.4,0,0.2,1);}
+        .dynamic-bag-class.held{opacity:1;}
+        .dynamic-bag-class.opened{width:115px;margin-left:7.5px;border-left:4px solid #424242;border-right:4px solid #424242;}
+        .dynamic-bag-fill{position:absolute;bottom:0;left:0;right:0;height:0%;transition:height 0.2s ease-out;z-index:0;}
+        .final-bag{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);width:100px;height:110px;background:linear-gradient(to right,#9e9e9e 0%,#e0e0e0 50%,#9e9e9e 100%);border:2px solid #424242;border-top:none;border-radius:0 0 8px 8px;opacity:0;transition:opacity 0.3s;display:flex;align-items:flex-end;overflow:hidden;box-shadow:0 5px 10px rgba(0,0,0,0.3);}
+        .led-screen-small{background-color:#000;border:2px inset #555;color:#00ff00;font-family:'Roboto Mono',monospace;font-weight:bold;padding:2px 6px;border-radius:2px;text-shadow:0 0 3px #00ff00;z-index:10;}
     </style>
 </head>
-<body class="p-2 sm:p-4">
-    <div class="max-w-7xl mx-auto space-y-4">
-        
-        <header class="wincc-header p-3 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <img src="https://raw.githubusercontent.com/Huynhthien200/anh-sui/main/logo-tdtu-inkythuatso-01.jpg" alt="Logo" class="h-10 bg-white p-1 rounded">
-                <div>
-                    <h1 class="text-xl font-bold uppercase tracking-widest">HMI RT Advanced - TDTU Factory</h1>
-                    <p class="text-xs text-sky-200 uppercase">Hệ Thống Đóng Gói Cà Phê</p>
+<body onload="checkInitialLogin()">
+
+    <!-- THANH ĐIỀU HƯỚNG (NAVBAR FACEBOOK STYLE) -->
+    <nav class="bg-[#1877f2] sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center h-14">
+            <div class="text-xl md:text-2xl font-bold flex items-center gap-2 text-white cursor-pointer">
+                <i class="fa-brands fa-facebook"></i> TDTU Coffee
+            </div>
+            <!-- CÁC TAB ĐIỀU HƯỚNG -->
+            <div class="flex h-full gap-2">
+                <button onclick="switchTab('user')" id="nav-user" class="h-full px-6 md:px-10 flex items-center justify-center border-b-[3px] border-white text-white hover:bg-white/10 transition group" title="Cổng Khách Hàng">
+                    <i class="fa-solid fa-house text-xl md:text-2xl group-hover:scale-110 transition-transform"></i>
+                </button>
+                <button onclick="switchTab('admin')" id="nav-admin" class="h-full px-6 md:px-10 flex items-center justify-center border-b-[3px] border-transparent text-white/70 hover:bg-white/10 hover:text-white transition group" title="Khu vực Quản trị">
+                    <i class="fa-solid fa-user-gear text-xl md:text-2xl group-hover:scale-110 transition-transform"></i>
+                </button>
+            </div>
+            <div class="flex gap-2 hidden md:flex">
+                <div class="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center cursor-pointer hover:bg-white/30 transition"><i class="fa-solid fa-bell"></i></div>
+                <div class="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center cursor-pointer hover:bg-white/30 transition"><i class="fa-solid fa-user"></i></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 space-y-6">
+
+        <!-- ============================================== -->
+        <!-- TAB 1: GIAO DIỆN KHÁCH HÀNG (MỤC HOME)         -->
+        <!-- ============================================== -->
+        <div id="tab-user-content" class="block space-y-6 animate-fade-in">
+            <!-- GIAO DIỆN ĐẶT HÀNG TRUNG TÂM SẠCH SẼ (BỎ SCADA P&ID) -->
+            <div class="max-w-2xl mx-auto space-y-6">
+                
+                <div class="user-panel border-t-4 border-[#1877f2] relative overflow-hidden shadow-lg">
+                    <!-- Ảnh bìa trang trí -->
+                    <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-blue-100 to-[#1877f2] opacity-20 pointer-events-none"></div>
+                    
+                    <div class="relative z-10 text-center pb-4 mb-4 border-b border-gray-100">
+                        <img src="https://raw.githubusercontent.com/Huynhthien200/anh-sui/main/logo-tdtu-inkythuatso-01.jpg" alt="Logo" class="h-16 mx-auto mb-2 rounded shadow-sm border bg-white">
+                        <h1 class="text-2xl font-bold uppercase tracking-wide text-[#1877f2]">ĐẶT HÀNG CÀ PHÊ TỰ ĐỘNG</h1>
+                        <p class="text-sm text-gray-500">Tùy chỉnh tỷ lệ cà phê và chúng tôi sẽ giao hàng tận nơi cho bạn.</p>
+                    </div>
+
+                    <div class="space-y-5 font-medium text-gray-700">
+                        <!-- THÔNG SỐ SẢN PHẨM -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-sm text-gray-500 font-bold uppercase"><i class="fa-solid fa-seedling text-yellow-700 mr-1"></i> Arabica (g/gói)</label>
+                                <input type="number" id="inp-w1-user" value="50.0" step="0.1" min="0" class="user-input font-numbers text-lg">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-sm text-gray-500 font-bold uppercase"><i class="fa-solid fa-seedling text-amber-900 mr-1"></i> Robusta (g/gói)</label>
+                                <input type="number" id="inp-w2-user" value="40.0" step="0.1" min="0" class="user-input font-numbers text-lg">
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-sm text-gray-500 font-bold uppercase"><i class="fa-solid fa-box-open text-blue-600 mr-1"></i> Số lượng (Gói)</label>
+                            <input type="number" id="inp-qty-user" value="50" min="1" class="user-input text-xl font-numbers font-bold text-[#1877f2]">
+                        </div>
+
+                        <!-- THÔNG TIN NGƯỜI MUA -->
+                        <div class="p-4 bg-gray-50 rounded-lg border border-gray-100 space-y-3">
+                            <h3 class="font-bold text-gray-700"><i class="fa-solid fa-user mr-2 text-[#1877f2]"></i>Thông tin người mua</h3>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Họ và tên</label>
+                                <input type="text" id="inp-name-user" placeholder="VD: Nguyễn Văn A" class="user-input" autocomplete="name">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Số điện thoại</label>
+                                    <input type="tel" id="inp-phone-user" placeholder="09xxxxxxxx" class="user-input" autocomplete="tel">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Email nhận hóa đơn</label>
+                                    <input type="email" id="inp-email-user" placeholder="email@example.com" class="user-input" autocomplete="email">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ĐỊA CHỈ & KHOẢNG CÁCH -->
+                        <div class="p-4 bg-blue-50/50 rounded-lg border border-blue-100 space-y-3">
+                            <h3 class="font-bold text-[#1877f2]"><i class="fa-solid fa-truck-fast mr-2"></i>Thông tin vận chuyển</h3>
+                            <div class="relative w-full z-50">
+                                <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Nhập địa chỉ giao hàng của bạn</label>
+                                <div class="relative flex items-center">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-location-dot text-[#1877f2]"></i>
+                                    </div>
+                                    <!-- Nhập địa chỉ gợi ý -->
+                                    <input type="text" id="inp-address-user" placeholder="VD: Số 9 đường số 7, KDC Kim Sơn..." class="user-input w-full pl-10 pr-12 py-3 shadow-inner" autocomplete="off">
+                                    <!-- Nút tự động lấy vị trí GPS -->
+                                    <div onclick="autoLocate()" title="Tự động lấy vị trí hiện tại" class="absolute right-2 p-2 bg-white rounded-md shadow hover:bg-gray-100 cursor-pointer text-[#1877f2] transition-colors border">
+                                        <i class="fa-solid fa-crosshairs"></i>
+                                    </div>
+                                    <!-- Gợi ý địa chỉ Autocomplete -->
+                                    <ul id="address-suggestions" class="absolute top-full left-0 w-full mt-1 bg-white border border-gray-300 rounded shadow-2xl hidden max-h-60 overflow-y-auto z-[100] text-sm text-gray-700 font-normal"></ul>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center bg-white p-3 rounded border border-gray-200">
+                                <label class="text-sm text-gray-600 font-bold"><i class="fa-solid fa-route mr-1 text-green-600"></i> Khoảng cách (Từ xưởng):</label>
+                                <div class="flex items-center gap-1 border-b border-gray-300 pb-1 w-28 justify-end">
+                                    <!-- CHỈ ĐỌC (READONLY) TRÁNH GIAN LẬN SỬA SỐ KM -->
+                                    <input type="text" id="inp-distance-user" placeholder="0.0" readonly class="w-full text-right font-numbers text-green-600 bg-transparent border-0 font-bold text-lg outline-none cursor-not-allowed">
+                                    <span class="text-sm font-bold text-gray-500">km</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ĐƠN GIÁ HIỆN TẠI (ĐỒNG BỘ TỪ ADMIN) -->
+                        <div id="price-info-user" class="text-xs text-center text-gray-500 bg-gray-50 border border-gray-100 rounded-lg py-2 px-3">
+                            Đơn giá hiện tại: Arabica <span id="txt-price-arabica-user" class="font-bold text-gray-700">500</span>đ/g · Robusta <span id="txt-price-robusta-user" class="font-bold text-gray-700">300</span>đ/g · Ship <span id="txt-price-ship-user" class="font-bold text-gray-700">5.000</span>đ/km
+                        </div>
+
+                        <!-- NÚT THANH TOÁN -->
+                        <button onclick="processOrderUser()" class="btn-order w-full mt-4 flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-qrcode text-xl"></i> TẠO MÃ THANH TOÁN
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Box Báo Cáo Tiến Độ (Dành cho khách hàng xem) -->
+                <div class="user-panel bg-white border border-gray-200 shadow">
+                    <div class="flex justify-between items-center border-b pb-2 mb-3">
+                        <h2 class="text-md font-bold text-gray-700"><i class="fa-solid fa-industry mr-2 text-gray-500"></i> TIẾN ĐỘ SẢN XUẤT TẠI XƯỞNG</h2>
+                        <div class="flex items-center gap-2 bg-gray-50 px-2 py-1 border rounded">
+                            <div id="plc-led-user" class="w-3 h-3 rounded-full bg-red-600 shadow-inner"></div>
+                            <span id="plc-status-text-user" class="text-xs font-bold text-red-600">MÁY DỪNG</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="text-sm font-bold text-gray-500 uppercase">Gói đã hoàn thành</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="txt-mw20-user" class="text-4xl font-numbers font-bold text-green-600">0</span>
+                            <span class="text-lg text-gray-400 font-numbers font-bold">/</span>
+                            <span id="txt-target-user" class="text-lg text-gray-500 font-numbers font-bold">50</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-100 h-5 rounded-full overflow-hidden relative border border-gray-200 shadow-inner">
+                        <div id="progress-bar-user" class="bg-green-500 h-full transition-all duration-300" style="width: 0%"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-gray-800" id="txt-percent-user">0%</div>
+                    </div>
                 </div>
             </div>
-            <div class="flex flex-col items-end shrink-0 border-l border-sky-600 pl-6">
-                <span id="current-date" class="text-sm font-bold">--/--/----</span>
-                <span id="current-time" class="text-xl font-numbers font-bold">--:--:--</span>
-            </div>
-        </header>
-
-        <div class="scada-panel p-2 flex flex-wrap justify-between items-center text-sm font-bold">
-            <div class="flex gap-4">
-                <span class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-blue-800"></i> MQTT: <span id="mqtt-status" class="text-blue-800">WAITING</span></span>
-                <span class="flex items-center gap-2 border-l-2 border-gray-400 pl-4"><i class="fa-solid fa-microchip text-red-600"></i> PLC S7-1200: <span id="plc-connection" class="text-red-600">OFFLINE</span></span>
-            </div>
-            <span class="text-xs text-gray-600 flex items-center gap-2"><i class="fa-regular fa-clock"></i> Cập nhật: <span id="last-update-time" class="font-numbers text-blue-800">--:--:--</span></span>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- ============================================== -->
+        <!-- TAB 2: GIAO DIỆN QUẢN TRỊ ADMIN                -->
+        <!-- ============================================== -->
+        <div id="tab-admin-content" class="hidden space-y-6">
             
-            <!-- CỘT TRÁI: CÀI ĐẶT & ĐIỀU KHIỂN -->
-            <div class="lg:col-span-4 space-y-4">
-                <div class="scada-panel p-4">
-                    <h2 class="text-md font-bold mb-4 border-b-2 border-gray-400 pb-1"><i class="fa-solid fa-sliders text-blue-800 mr-2"></i>THÔNG SỐ CÀI ĐẶT (RECIPE)</h2>
-                    <div class="space-y-3 font-bold text-sm">
-                        <div class="flex justify-between items-center">
-                            <label>Arabica Hạt (MD60):</label>
-                            <div><input type="number" id="inp-w1" value="50.0" step="0.1" class="w-20 text-right font-numbers"> g</div>
+            <!-- ĐĂNG NHẬP ADMIN -->
+            <div id="admin-login-box" class="flex flex-col items-center justify-center py-10">
+                <div class="scada-panel p-8 w-full max-w-md space-y-6 text-center shadow-lg rounded-lg border border-gray-300 bg-white">
+                    <div class="text-gray-800 text-5xl mb-2"><i class="fa-solid fa-user-shield"></i></div>
+                    <h2 class="text-2xl font-bold text-gray-800">Đăng Nhập Quản Trị</h2>
+                    <p class="text-sm text-gray-500">Khu vực dành riêng cho Quản trị viên để vào bảng điều khiển máy đóng gói.</p>
+                    <div class="space-y-4 text-left">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tài khoản</label>
+                            <input type="text" id="login-username-admin" placeholder="Nhập: admin" class="user-input w-full">
                         </div>
-                        <div class="flex justify-between items-center">
-                            <label>Robusta Hạt (MD64):</label>
-                            <div><input type="number" id="inp-w2" value="40.0" step="0.1" class="w-20 text-right font-numbers"> g</div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Mật khẩu</label>
+                            <input type="password" id="login-password-admin" placeholder="Nhập: 123456" class="user-input w-full">
                         </div>
-                        <div class="flex justify-between items-center">
-                            <label>Mục tiêu (MW22):</label>
-                            <div><input type="number" id="inp-qty" value="500" class="w-20 text-right font-numbers text-red-600"> GÓI</div>
-                        </div>
-                        <div class="flex justify-between items-center border-t border-gray-400 pt-2">
-                            <label>Sai số Cân 1 (MD164):</label>
-                            <div><input type="number" id="inp-err1" value="0.5" step="0.1" class="w-20 text-right font-numbers"> g</div>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <label>Sai số Cân 2 (MD168):</label>
-                            <div><input type="number" id="inp-err2" value="0.5" step="0.1" class="w-20 text-right font-numbers"> g</div>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 mt-6">
-                        <button onclick="sendControl(true, false, false)" class="btn-scada btn-start py-2"><i class="fa-solid fa-play"></i> START</button>
-                        <button onclick="sendControl(false, true, false)" class="btn-scada btn-stop py-2"><i class="fa-solid fa-stop"></i> STOP</button>
-                        <button onclick="sendControl(false, false, true)" class="btn-scada btn-reset py-2 col-span-2"><i class="fa-solid fa-rotate-right"></i> RESET LỖI</button>
-                    </div>
-                </div>
-
-                <div class="scada-panel p-4">
-                    <h2 class="text-md font-bold mb-2 border-b-2 border-gray-400 pb-1"><i class="fa-solid fa-box-check text-blue-800 mr-2"></i>TIẾN ĐỘ SX (MW20)</h2>
-                    <div class="flex justify-center items-baseline gap-2 mb-2">
-                        <span id="txt-mw20" class="text-5xl font-numbers font-bold text-green-700">0</span>
-                        <span class="text-xl text-gray-500 font-numbers font-bold">/</span>
-                        <span id="txt-target" class="text-2xl text-gray-600 font-numbers font-bold">500</span>
-                    </div>
-                    <div class="w-full bg-[#808080] h-5 border-2 border-inset border-gray-500 relative">
-                        <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
-                        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference" id="txt-percent">0%</div>
+                        <p id="login-error-admin" class="text-red-500 text-sm hidden font-semibold bg-red-50 p-2 rounded border border-red-200">Sai tài khoản hoặc mật khẩu!</p>
+                        <button onclick="loginAdmin()" class="btn-order bg-gray-800 hover:bg-black text-white w-full py-3 mt-4 text-lg border-none rounded-lg"><i class="fa-solid fa-right-to-bracket mr-2"></i>ĐĂNG NHẬP</button>
                     </div>
                 </div>
             </div>
 
-            <!-- CỘT PHẢI: WINCC ĐỒ HỌA P&ID -->
-            <div class="lg:col-span-8 scada-panel p-4 flex flex-col">
-                <div class="flex justify-between items-center mb-4 border-b-2 border-gray-400 pb-1">
-                    <h2 class="text-md font-bold"><i class="fa-solid fa-industry text-gray-700 mr-2"></i>P&ID HỆ THỐNG GẮP & XẢ</h2>
-                    
-                    <!-- Bổ sung thanh trạng thái cho cảm biến Tag 14 và PLC -->
-                    <div class="flex gap-4">
-                        <div class="flex items-center gap-2 font-bold text-sm bg-white border-2 border-gray-400 px-3 py-1">
-                            CB Hồng Ngoại (I0.2): 
-                            <div id="sensor-led" class="w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner transition-colors duration-200"></div>
-                            <span id="sensor-status-text" class="text-gray-600 uppercase">Trống (Hở)</span>
-                        </div>
-                        <div class="flex items-center gap-2 font-bold text-sm bg-white border-2 border-gray-400 px-3 py-1">
-                            Hệ thống: 
-                            <div id="plc-led" class="w-4 h-4 rounded-full bg-red-600 border-2 border-gray-500 shadow-inner"></div>
-                            <span id="plc-status-text" class="text-red-600 uppercase">STOPPED</span>
+            <!-- BẢNG ĐIỀU KHIỂN SCADA -->
+            <div id="admin-scada-box" class="hidden space-y-6">
+                <!-- HEADER ADMIN -->
+                <header class="wincc-header p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md" style="background: linear-gradient(to bottom, #000080, #0050b3);">
+                    <div class="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/Huynhthien200/anh-sui/main/logo-tdtu-inkythuatso-01.jpg" alt="Logo" class="h-10 bg-white p-1 rounded border">
+                        <div>
+                            <h1 class="text-xl font-bold uppercase tracking-widest text-white">HMI RT Advanced - ADMIN PANEL</h1>
+                            <p class="text-xs text-sky-200 uppercase">Hệ Thống Đóng Gói Cà Phê TDTU</p>
                         </div>
                     </div>
+                    <div class="flex flex-col items-end shrink-0 border-l border-sky-600 pl-6">
+                        <button onclick="logoutAdmin()" class="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow mb-2 font-bold transition-colors"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất hệ thống</button>
+                        <span id="current-time-admin" class="text-lg font-numbers font-bold text-white">--:--:--</span>
+                    </div>
+                </header>
+
+                <div class="scada-panel p-2 flex flex-wrap justify-between items-center text-sm font-bold shadow-sm">
+                    <div class="flex gap-4">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-blue-800"></i> MQTT: <span id="mqtt-status-admin" class="text-blue-800">WAITING</span></span>
+                        <span class="flex items-center gap-2 border-l-2 border-gray-400 pl-4"><i class="fa-solid fa-microchip text-red-600"></i> PLC S7-1200: <span id="plc-connection-admin" class="text-red-600">OFFLINE</span></span>
+                    </div>
+                    <span class="text-xs text-gray-600 flex items-center gap-2"><i class="fa-regular fa-clock"></i> Cập nhật: <span id="last-update-time-admin" class="font-numbers text-blue-800">--:--:--</span></span>
                 </div>
 
-                <div class="scada-canvas">
-                    <div class="center-axis top-6">
-                        <div class="flex gap-12 z-10">
-                            <!-- Bồn 1 -->
-                            <div class="flex flex-col items-center">
-                                <div class="wincc-hopper">
-                                    <span class="text-[9px] font-bold text-gray-700 mt-2">BỒN 1 (ARABICA)</span>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- CỘT TRÁI ADMIN -->
+                    <div class="lg:col-span-4 space-y-4">
+                        <div class="scada-panel p-4">
+                            <h2 class="text-md font-bold mb-4 border-b-2 border-gray-400 pb-1"><i class="fa-solid fa-sliders text-blue-800 mr-2"></i>CÀI ĐẶT THÔNG SỐ (RECIPE)</h2>
+                            <div class="space-y-3 font-bold text-sm">
+                                <div class="flex justify-between items-center">
+                                    <label>Arabica Hạt (MD60):</label>
+                                    <div class="flex items-center"><input type="number" id="inp-w1-admin" value="50.0" step="0.1" class="admin-input w-20 text-right font-numbers"> &nbsp;g</div>
                                 </div>
-                                <div class="wincc-pipe h-6"></div>
-                                <div id="graphic-valve-1" class="wincc-valve">
-                                    <div class="valve-handle"></div><div class="valve-stem"></div>
-                                    <div class="valve-left"></div><div class="valve-right"></div>
+                                <div class="flex justify-between items-center">
+                                    <label>Robusta Hạt (MD64):</label>
+                                    <div class="flex items-center"><input type="number" id="inp-w2-admin" value="40.0" step="0.1" class="admin-input w-20 text-right font-numbers"> &nbsp;g</div>
                                 </div>
-                                <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-1" class="wincc-flow flow-arabica"></div></div>
+                                <div class="flex justify-between items-center">
+                                    <label>Mục tiêu (MW22):</label>
+                                    <div class="flex items-center"><input type="number" id="inp-qty-admin" value="500" class="admin-input w-20 text-right font-numbers text-red-600"> &nbsp;GÓI</div>
+                                </div>
+                                <div class="flex justify-between items-center border-t border-gray-400 pt-2">
+                                    <label>Sai số Cân 1 (MD164):</label>
+                                    <div class="flex items-center"><input type="number" id="inp-err1-admin" value="0.5" step="0.1" class="admin-input w-20 text-right font-numbers"> &nbsp;g</div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label>Sai số Cân 2 (MD168):</label>
+                                    <div class="flex items-center"><input type="number" id="inp-err2-admin" value="0.5" step="0.1" class="admin-input w-20 text-right font-numbers"> &nbsp;g</div>
+                                </div>
                             </div>
-                            <!-- Bồn 2 -->
-                            <div class="flex flex-col items-center">
-                                <div class="wincc-hopper">
-                                    <span class="text-[9px] font-bold text-gray-700 mt-2">BỒN 2 (ROBUSTA)</span>
-                                </div>
-                                <div class="wincc-pipe h-6"></div>
-                                <div id="graphic-valve-2" class="wincc-valve">
-                                    <div class="valve-handle"></div><div class="valve-stem"></div>
-                                    <div class="valve-left"></div><div class="valve-right"></div>
-                                </div>
-                                <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-2" class="wincc-flow flow-robusta"></div></div>
+                            <div class="grid grid-cols-2 gap-2 mt-6">
+                                <button onclick="sendControlAdmin(true, false, false)" class="btn-scada btn-start py-2"><i class="fa-solid fa-play"></i> START</button>
+                                <button onclick="sendControlAdmin(false, true, false)" class="btn-scada btn-stop py-2"><i class="fa-solid fa-stop"></i> STOP</button>
+                                <button onclick="sendControlAdmin(false, false, true)" class="btn-scada btn-reset py-2 col-span-2"><i class="fa-solid fa-rotate-right"></i> RESET LỖI</button>
                             </div>
                         </div>
 
-                        <!-- Buồng cân -->
-                        <div class="wincc-weigh-tank -mt-2 z-10">
-                            <div id="graphic-weigh-fill" class="dynamic-bag-fill bag-beans-fill"></div>
-                            <span class="text-[10px] font-bold text-white mix-blend-difference tracking-widest mb-1 z-10">BUỒNG CÂN (MR52)</span>
-                            <span id="txt-realtime-weight" class="led-screen-small text-xl z-10">0.0 g</span>
+                        <div class="scada-panel p-4">
+                            <h2 class="text-md font-bold mb-4 border-b-2 border-gray-400 pb-1"><i class="fa-solid fa-tags text-blue-800 mr-2"></i>CÀI ĐẶT GIÁ BÁN (ĐỒNG BỘ USER)</h2>
+                            <div class="space-y-3 font-bold text-sm">
+                                <div class="flex justify-between items-center">
+                                    <label><i class="fa-solid fa-seedling text-yellow-700 mr-1"></i> Giá Arabica:</label>
+                                    <div class="flex items-center"><input type="number" id="inp-price-arabica-admin" value="500" step="10" min="0" class="admin-input w-24 text-right font-numbers"> &nbsp;đ/g</div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label><i class="fa-solid fa-seedling text-amber-900 mr-1"></i> Giá Robusta:</label>
+                                    <div class="flex items-center"><input type="number" id="inp-price-robusta-admin" value="300" step="10" min="0" class="admin-input w-24 text-right font-numbers"> &nbsp;đ/g</div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label><i class="fa-solid fa-motorcycle mr-1 text-green-700"></i> Giá Ship:</label>
+                                    <div class="flex items-center"><input type="number" id="inp-price-ship-admin" value="5000" step="500" min="0" class="admin-input w-24 text-right font-numbers"> &nbsp;đ/km</div>
+                                </div>
+                            </div>
+                            <button onclick="updatePriceAdmin()" class="btn-scada py-2 mt-4 w-full" style="background-color:#1877f2;color:white;"><i class="fa-solid fa-cloud-arrow-up"></i> CẬP NHẬT & ĐỒNG BỘ GIÁ</button>
+                            <p class="text-[11px] text-gray-600 mt-2 leading-snug"><i class="fa-solid fa-circle-info mr-1"></i>Giá mới sẽ tự động cập nhật cho khách hàng ở trang đặt hàng và mã QR thanh toán ngay lập tức.</p>
                         </div>
 
-                        <div class="wincc-pipe h-6"></div>
-                        <div id="graphic-valve-weigh" class="wincc-valve">
-                            <div class="valve-handle"></div><div class="valve-stem"></div>
-                            <div class="valve-left"></div><div class="valve-right"></div>
+                        <div class="scada-panel p-4">
+                            <h2 class="text-md font-bold mb-2 border-b-2 border-gray-400 pb-1"><i class="fa-solid fa-box-check text-blue-800 mr-2"></i>TIẾN ĐỘ SX (MW20)</h2>
+                            <div class="flex justify-center items-baseline gap-2 mb-2">
+                                <span id="txt-mw20-admin" class="text-5xl font-numbers font-bold text-green-700">0</span>
+                                <span class="text-xl text-gray-500 font-numbers font-bold">/</span>
+                                <span id="txt-target-admin" class="text-2xl text-gray-600 font-numbers font-bold">500</span>
+                            </div>
+                            <div class="w-full bg-[#808080] h-5 border-2 border-inset border-gray-500 relative">
+                                <div id="progress-bar-admin" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                                <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference" id="txt-percent-admin">0%</div>
+                            </div>
                         </div>
-                        <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-weigh" class="wincc-flow flow-mixed"></div></div>
                     </div>
 
-                    <div class="kho-bao-box">KHO BAO</div>
-
-                    <div class="rotary-base">
-                        <div class="rotary-base-inner"><div class="rotary-base-dot"></div></div>
-                        
-                        <div id="rotary-arm" class="rotary-arm">
-                            <div class="arm-connector"></div>
-                            
-                            <div id="cyl-2" class="cyl-block">
-                                <span class="cyl-text">CYL-2</span>
-                                <div class="cylinder-rod"><div class="suction-cup"></div></div>
+                    <!-- ĐỒ HỌA P&ID ADMIN -->
+                    <div class="lg:col-span-8 scada-panel p-4 flex flex-col">
+                        <div class="flex justify-between items-center mb-4 border-b-2 border-gray-400 pb-1">
+                            <h2 class="text-md font-bold"><i class="fa-solid fa-industry text-gray-700 mr-2"></i>P&ID HỆ THỐNG GẮP & XẢ</h2>
+                            <div class="flex gap-4">
+                                <div class="flex items-center gap-2 font-bold text-sm bg-white border-2 border-gray-400 px-3 py-1">
+                                    CB Hồng Ngoại (I0.2): 
+                                    <div id="sensor-led-admin" class="w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner transition-colors duration-200"></div>
+                                    <span id="sensor-status-text-admin" class="text-gray-600 uppercase">Trống (Hở)</span>
+                                </div>
+                                <div class="flex items-center gap-2 font-bold text-sm bg-white border-2 border-gray-400 px-3 py-1">
+                                    Hệ thống: 
+                                    <div id="plc-led-admin" class="w-4 h-4 rounded-full bg-red-600 border-2 border-gray-500 shadow-inner"></div>
+                                    <span id="plc-status-text-admin" class="text-red-600 uppercase">STOPPED</span>
+                                </div>
                             </div>
+                        </div>
 
-                            <div id="cyl-1" class="cyl-block">
-                                <span class="cyl-text">CYL-1</span>
-                                <div class="cylinder-rod"><div class="suction-cup"></div></div>
+                        <div class="scada-canvas">
+                            <div class="center-axis top-6">
+                                <div class="flex gap-12 z-10">
+                                    <div class="flex flex-col items-center">
+                                        <div class="wincc-hopper"><span class="text-[9px] font-bold text-gray-700 mt-2">BỒN 1 (ARABICA)</span></div>
+                                        <div class="wincc-pipe h-6"></div>
+                                        <div id="graphic-valve-1-admin" class="wincc-valve"><div class="valve-handle"></div><div class="valve-stem"></div><div class="valve-left"></div><div class="valve-right"></div></div>
+                                        <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-1-admin" class="wincc-flow flow-arabica"></div></div>
+                                    </div>
+                                    <div class="flex flex-col items-center">
+                                        <div class="wincc-hopper"><span class="text-[9px] font-bold text-gray-700 mt-2">BỒN 2 (ROBUSTA)</span></div>
+                                        <div class="wincc-pipe h-6"></div>
+                                        <div id="graphic-valve-2-admin" class="wincc-valve"><div class="valve-handle"></div><div class="valve-stem"></div><div class="valve-left"></div><div class="valve-right"></div></div>
+                                        <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-2-admin" class="wincc-flow flow-robusta"></div></div>
+                                    </div>
+                                </div>
+                                <div class="wincc-weigh-tank -mt-2 z-10">
+                                    <div id="graphic-weigh-fill-admin" class="dynamic-bag-fill bag-beans-fill"></div>
+                                    <span class="text-[10px] font-bold text-white mix-blend-difference tracking-widest mb-1 z-10">BUỒNG CÂN (MR52)</span>
+                                    <span id="txt-realtime-weight-admin" class="led-screen-small text-xl z-10">0.0 g</span>
+                                </div>
+                                <div class="wincc-pipe h-6"></div>
+                                <div id="graphic-valve-weigh-admin" class="wincc-valve"><div class="valve-handle"></div><div class="valve-stem"></div><div class="valve-left"></div><div class="valve-right"></div></div>
+                                <div class="wincc-pipe h-16 z-0"><div id="graphic-flow-weigh-admin" class="wincc-flow flow-mixed"></div></div>
                             </div>
-
-                            <div id="dynamic-bag" class="flex flex-col items-center justify-end pb-3 z-10">
-                                <div id="dynamic-bag-fill" class="dynamic-bag-fill bag-beans-fill" style="opacity: 0.9;"></div>
+                            <div class="kho-bao-box">KHO BAO</div>
+                            <div class="rotary-base">
+                                <div class="rotary-base-inner"><div class="rotary-base-dot"></div></div>
+                                <div id="rotary-arm-admin" class="rotary-arm">
+                                    <div class="arm-connector"></div>
+                                    <div id="cyl-2-admin" class="cyl-block"><span class="cyl-text">CYL-2</span><div class="cylinder-rod"><div class="suction-cup"></div></div></div>
+                                    <div id="cyl-1-admin" class="cyl-block"><span class="cyl-text">CYL-1</span><div class="cylinder-rod"><div class="suction-cup"></div></div></div>
+                                    <div id="dynamic-bag-admin" class="dynamic-bag-class flex flex-col items-center justify-end pb-3 z-10">
+                                        <div id="dynamic-bag-fill-admin" class="dynamic-bag-fill bag-beans-fill" style="opacity: 0.9;"></div>
+                                        <span class="text-[11px] font-bold uppercase tracking-widest text-gray-800 z-20">BAO BÌ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="final-bag-admin" class="final-bag flex flex-col items-center justify-end pb-3">
+                                <div class="w-full h-full bag-beans-fill absolute bottom-0 left-0 right-0"></div>
                                 <span class="text-[11px] font-bold uppercase tracking-widest text-gray-800 z-20">BAO BÌ</span>
                             </div>
                         </div>
                     </div>
+                </div> 
 
-                    <div id="final-bag" class="final-bag flex flex-col items-center justify-end pb-3">
-                        <div class="w-full h-full bag-beans-fill absolute bottom-0 left-0 right-0"></div>
-                        <span class="text-[11px] font-bold uppercase tracking-widest text-gray-800 z-20">BAO BÌ</span>
+                <!-- ĐƠN HÀNG CHỜ DUYỆT (ADMIN PHẢI XÁC NHẬN TRƯỚC KHI MÁY CHẠY) -->
+                <div class="scada-panel">
+                    <div class="p-3 border-b-2 border-gray-400 flex justify-between items-center bg-[#c0c0c0]">
+                        <h2 class="text-md font-bold text-gray-800 flex items-center gap-2 uppercase">
+                            <i class="fa-solid fa-bell-concierge text-blue-800"></i> ĐƠN HÀNG CHỜ DUYỆT
+                        </h2>
+                        <span id="pending-count-admin" class="hidden bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">0</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[300px] overflow-y-auto w-full bg-white border-2 border-inset border-gray-400">
+                        <table class="w-full text-sm text-left whitespace-nowrap">
+                            <thead class="text-xs text-black bg-[#e0e0e0] uppercase sticky top-0 border-b-2 border-gray-400 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 border-r border-gray-300">Thời gian</th>
+                                    <th class="px-4 py-3 border-r border-gray-300">Khách hàng</th>
+                                    <th class="px-4 py-3 border-r border-gray-300">Địa chỉ giao</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">Arabica (g)</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">Robusta (g)</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">SL (Gói)</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">KM</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300 text-red-600">Tổng tiền</th>
+                                    <th class="px-4 py-3 text-center">Duyệt đơn</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pending-order-table-body" class="divide-y divide-gray-300"><tr><td colspan="9" class="px-4 py-6 text-center text-gray-500 italic">Không có đơn hàng nào chờ duyệt.</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- LỊCH SỬ CHỈ HIỂN THỊ Ở ADMIN -->
+                <div class="scada-panel">
+                    <div class="p-3 border-b-2 border-gray-400 flex justify-between items-center bg-[#c0c0c0]">
+                        <h2 class="text-md font-bold text-gray-800 flex items-center gap-2 uppercase">
+                            <i class="fa-solid fa-list-ol text-blue-800"></i> NHẬT KÝ ĐIỀU KHIỂN & XUẤT BÁO CÁO
+                        </h2>
+                        <div class="flex gap-2">
+                            <button onclick="exportCSV()" class="btn-scada btn-export px-3 py-1 text-xs"><i class="fa-solid fa-file-csv"></i> Xuất File Excel</button>
+                            <button onclick="clearHistory()" class="btn-scada px-3 py-1 text-xs"><i class="fa-solid fa-trash-can"></i> Xóa lịch sử</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[300px] overflow-y-auto w-full bg-white border-2 border-inset border-gray-400">
+                        <table class="w-full text-sm text-left whitespace-nowrap">
+                            <thead class="text-xs text-black bg-[#e0e0e0] uppercase sticky top-0 border-b-2 border-gray-400 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 border-r border-gray-300">Thời gian</th>
+                                    <th class="px-4 py-3 border-r border-gray-300">Hành động</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">W1 (g)</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">W2 (g)</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">Sai số 1</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300">Sai số 2</th>
+                                    <th class="px-4 py-3 text-center border-r border-gray-300 text-blue-800">Target (Gói)</th>
+                                    <th class="px-4 py-3 text-right">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body" class="divide-y divide-gray-300"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        </div> 
 
-        <!-- LỊCH SỬ ĐẶT LỆNH & XUẤT DỮ LIỆU -->
-        <div class="scada-panel">
-            <div class="p-3 border-b-2 border-gray-400 flex justify-between items-center bg-[#c0c0c0]">
-                <h2 class="text-md font-bold text-gray-800 flex items-center gap-2 uppercase">
-                    <i class="fa-solid fa-list-ol text-blue-800"></i> NHẬT KÝ ĐIỀU KHIỂN & XUẤT BÁO CÁO
-                </h2>
-                <div class="flex gap-2">
-                    <button onclick="exportCSV()" class="btn-scada btn-export px-3 py-1 text-xs"><i class="fa-solid fa-file-csv"></i> Xuất File Excel (CSV)</button>
-                    <button onclick="clearHistory()" class="btn-scada px-3 py-1 text-xs"><i class="fa-solid fa-trash-can"></i> Xóa lịch sử</button>
+        </div>
+
+    </div>
+
+    <!-- ================= MODAL MÃ QR THANH TOÁN (VIETQR - NGÂN HÀNG THẬT) ================= -->
+    <div id="qr-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[1000] p-4 transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center space-y-4 relative transform transition-all">
+            <button onclick="closeQRModal()" class="absolute top-3 right-4 text-gray-400 hover:text-red-500 text-2xl transition-colors"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-xl font-bold text-[#1877f2]"><i class="fa-solid fa-qrcode mr-2"></i>Thanh Toán Đơn Hàng</h3>
+            <p class="text-sm text-gray-500 border-b pb-3">Sử dụng App Ngân hàng hoặc ví điện tử để quét mã thanh toán dưới đây.</p>
+            
+            <div class="flex justify-center py-2 relative">
+                <!-- Vòng quay Loading trong lúc gọi API ảnh QR -->
+                <div class="absolute inset-0 flex items-center justify-center bg-white/80 z-10 hidden" id="qr-loading">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-[#1877f2]"></i>
                 </div>
+                <!-- Ảnh QR -->
+                <img id="qr-image" src="" alt="QR Code Thanh Toán" class="w-56 h-auto border-4 border-[#1877f2] p-1 rounded-lg shadow-md transition-opacity" onload="document.getElementById('qr-loading').classList.add('hidden')">
             </div>
             
-            <div class="overflow-x-auto max-h-[300px] overflow-y-auto w-full bg-white">
-                <table class="w-full text-sm text-left whitespace-nowrap">
-                    <thead class="text-xs text-black bg-[#e0e0e0] uppercase sticky top-0 border-b-2 border-gray-400 z-10">
-                        <tr>
-                            <th class="px-4 py-3 border-r border-gray-300">Thời gian</th>
-                            <th class="px-4 py-3 border-r border-gray-300">Hành động</th>
-                            <th class="px-4 py-3 text-center border-r border-gray-300">W1 (g)</th>
-                            <th class="px-4 py-3 text-center border-r border-gray-300">W2 (g)</th>
-                            <th class="px-4 py-3 text-center border-r border-gray-300">Sai số 1</th>
-                            <th class="px-4 py-3 text-center border-r border-gray-300">Sai số 2</th>
-                            <th class="px-4 py-3 text-center border-r border-gray-300 text-blue-800">Target (Gói)</th>
-                            <th class="px-4 py-3 text-right">Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body" class="divide-y divide-gray-300"></tbody>
-                </table>
+            <div class="text-left text-sm bg-blue-50 p-4 rounded-xl border border-blue-100 text-gray-700 shadow-inner">
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-user w-4"></i> Người mua:</span> <span class="font-bold"><span id="bill-name"></span></span></p>
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-phone w-4"></i> SĐT:</span> <span class="font-bold"><span id="bill-phone"></span></span></p>
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-envelope w-4"></i> Email:</span> <span class="font-bold"><span id="bill-email"></span></span></p>
+                <div class="border-t border-blue-200 pt-2 mt-2"></div>
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-seedling text-yellow-700 w-4"></i> Arabica:</span> <span class="font-bold"><span id="bill-w1"></span> g</span></p>
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-seedling text-amber-900 w-4"></i> Robusta:</span> <span class="font-bold"><span id="bill-w2"></span> g</span></p>
+                <p class="flex justify-between mb-1"><span><i class="fa-solid fa-box-open text-blue-600 w-4"></i> Số lượng:</span> <span class="font-bold"><span id="bill-qty"></span> gói</span></p>
+                <p class="flex justify-between text-green-600 mb-2"><span><i class="fa-solid fa-motorcycle w-4"></i> Giao hàng:</span> <span class="font-bold"><span id="bill-dist"></span> km</span></p>
+                <div class="border-t border-blue-200 pt-2 mt-2"></div>
+                <p class="text-lg font-bold text-red-600 flex justify-between items-center"><span>TỔNG TIỀN:</span> <span class="text-2xl"><span id="bill-total"></span>đ</span></p>
             </div>
+            
+            <button onclick="confirmPaymentAndSend()" class="w-full bg-[#1877f2] hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] text-lg uppercase tracking-wide">
+                <i class="fa-solid fa-check-circle mr-2"></i> Đã Chuyển Tiền Thành Công
+            </button>
+            <p class="text-[10px] text-gray-400 mt-2" id="qr-modal-note">* Đơn hàng sẽ được gửi tới Admin để duyệt. Máy sẽ chạy ngay sau khi Admin xác nhận đơn.</p>
         </div>
     </div>
 
-    <!-- SCRIPT LOGIC -->
+    <!-- SCRIPT LOGIC VẬN HÀNH CHÍNH -->
     <script>
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('current-date').innerText = now.toLocaleDateString('vi-VN');
-            document.getElementById('current-time').innerText = now.toLocaleTimeString('vi-VN', {hour12: false});
+        // ================= KHỞI TẠO TRẠNG THÁI (Giữ đăng nhập F5) =================
+        let isAdminLoggedIn = false;
+        
+        function checkInitialLogin() {
+            // Lấy từ LocalStorage để không bị văng ra khi F5 tab admin
+            if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+                isAdminLoggedIn = true;
+            }
+            switchTab('user'); // Mặc định hiển thị tab khách hàng khi load web lần đầu
+            if (typeof applyPriceConfigToUI === 'function') applyPriceConfigToUI(); // Hiện giá mặc định trong lúc chờ MQTT đồng bộ
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
+        // ================= TÌM KIẾM ĐỊA CHỈ & ĐỊNH VỊ (OSM + PHOTON API FREE NÂNG CAO) =================
+        const factoryCoords = { lat: 10.732668, lng: 106.699764 }; // Tọa độ TDTU Quận 7
+        let searchTimeout;
+        const addrInput = document.getElementById('inp-address-user');
+        const suggestBox = document.getElementById('address-suggestions');
+        const distInput = document.getElementById('inp-distance-user');
+
+        addrInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value;
+            if(query.length < 3) {
+                suggestBox.classList.add('hidden');
+                return;
+            }
+            
+            const enhancedQuery = (query.includes("Hồ Chí Minh") || query.includes("HCM")) ? query : query + " Hồ Chí Minh";
+            
+            searchTimeout = setTimeout(() => {
+                // API 1: Photon (Tìm theo key word cực nhanh)
+                fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(enhancedQuery)}&lat=${factoryCoords.lat}&lon=${factoryCoords.lng}&limit=5`)
+                .then(res => res.json())
+                .then(data => {
+                    suggestBox.innerHTML = '';
+                    if(data.features && data.features.length > 0) {
+                        data.features.forEach(f => {
+                            let nameStr = f.properties.name || "";
+                            if(f.properties.street && !nameStr.includes(f.properties.street)) nameStr += ", " + f.properties.street;
+                            if(f.properties.city && !nameStr.includes(f.properties.city)) nameStr += ", " + f.properties.city;
+                            else if(f.properties.state) nameStr += ", " + f.properties.state;
+
+                            const li = document.createElement('li');
+                            li.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 truncate flex items-center gap-3 transition-colors';
+                            li.innerHTML = `<i class="fa-solid fa-location-dot text-[#1877f2] shrink-0"></i> <span class="text-sm break-words whitespace-normal leading-tight">${nameStr}</span>`;
+                            li.onclick = () => selectAddress(nameStr, f.geometry.coordinates[1], f.geometry.coordinates[0]);
+                            suggestBox.appendChild(li);
+                        });
+                        suggestBox.classList.remove('hidden');
+                    } else {
+                        // Gọi API 2 dự phòng: Nominatim (Bản đồ OSM gốc)
+                        fetchNominatim(enhancedQuery);
+                    }
+                }).catch(e => fetchNominatim(enhancedQuery));
+            }, 600); 
+        });
+
+        function fetchNominatim(query) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&addressdetails=1&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                suggestBox.innerHTML = '';
+                if(data.length > 0) {
+                    data.forEach(place => {
+                        const li = document.createElement('li');
+                        li.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0 truncate flex items-center gap-3 transition-colors';
+                        li.innerHTML = `<i class="fa-solid fa-location-dot text-[#1877f2] shrink-0"></i> <span class="text-sm break-words whitespace-normal leading-tight">${place.display_name}</span>`;
+                        li.onclick = () => selectAddress(place.display_name, place.lat, place.lon);
+                        suggestBox.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 text-red-500 text-sm';
+                    li.innerHTML = `Không tìm thấy địa chỉ. Xin hãy ấn vào nút Định vị (<i class="fa-solid fa-crosshairs"></i>) bên phải ô nhập.`;
+                    suggestBox.appendChild(li);
+                }
+                suggestBox.classList.remove('hidden');
+            }).catch(e => suggestBox.classList.add('hidden'));
+        }
+
+        // Định vị GPS tự động khi bấm nút Crosshairs
+        function autoLocate() {
+            if (navigator.geolocation) {
+                addrInput.value = "Đang tìm vị trí hiện tại của bạn...";
+                distInput.value = "...";
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        // Lấy tên đường hiển thị ra cho đẹp
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`)
+                        .then(res => res.json())
+                        .then(data => {
+                            addrInput.value = data.display_name || `Vị trí tọa độ: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                            getRouteDistance(lat, lon);
+                        }).catch(e => {
+                            addrInput.value = `Vị trí tọa độ: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                            getRouteDistance(lat, lon); // Vẫn tính khoảng cách
+                        });
+                    },
+                    (error) => {
+                        alert("Lỗi: Vui lòng cho phép trình duyệt truy cập Vị trí (Location) của bạn.");
+                        addrInput.value = ""; distInput.value = "";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                alert("Trình duyệt không hỗ trợ GPS.");
+            }
+        }
+
+        function selectAddress(addressStr, lat, lon) {
+            addrInput.value = addressStr;
+            suggestBox.classList.add('hidden');
+            getRouteDistance(lat, lon);
+        }
+
+        function getRouteDistance(lat, lon) {
+            distInput.value = "Đang tính...";
+            // Tính khoảng cách đường đi xe thực tế qua OSRM API
+            fetch(`https://router.project-osrm.org/route/v1/driving/${factoryCoords.lng},${factoryCoords.lat};${lon},${lat}?overview=false`)
+            .then(res => res.json())
+            .then(routeData => {
+                if(routeData.code === 'Ok' && routeData.routes.length > 0) {
+                    const distanceKm = (routeData.routes[0].distance / 1000).toFixed(1);
+                    distInput.value = distanceKm;
+                } else {
+                    calculateFallbackDistance(lat, lon);
+                }
+            })
+            .catch(err => { calculateFallbackDistance(lat, lon); });
+        }
+
+        // Tính khoảng cách đường chim bay nếu API dẫn đường OSRM nghẽn mạng
+        function calculateFallbackDistance(lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - factoryCoords.lat) * Math.PI / 180;
+            const dLon = (lon2 - factoryCoords.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(factoryCoords.lat * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            // Nhân thêm hệ số 1.3 để giả lập khoảng cách đường bộ do phải rẽ nhánh đường
+            distInput.value = ((R * c) * 1.3).toFixed(1); 
+        }
+
+        document.addEventListener('click', (e) => {
+            if(!addrInput.contains(e.target) && !suggestBox.contains(e.target)) suggestBox.classList.add('hidden');
+        });
+
+        // ================= XỬ LÝ CHUYỂN TAB VÀ ĐĂNG NHẬP ADMIN =================
+        function switchTab(tabName) {
+            const tabUserContent = document.getElementById('tab-user-content');
+            const tabAdminContent = document.getElementById('tab-admin-content');
+            const navUser = document.getElementById('nav-user');
+            const navAdmin = document.getElementById('nav-admin');
+
+            if (tabName === 'user') {
+                tabUserContent.classList.remove('hidden'); tabUserContent.classList.add('block');
+                tabAdminContent.classList.remove('block'); tabAdminContent.classList.add('hidden');
+                
+                navUser.classList.add('border-white', 'text-white'); navUser.classList.remove('border-transparent', 'text-white/70');
+                navAdmin.classList.add('border-transparent', 'text-white/70'); navAdmin.classList.remove('border-white', 'text-white');
+            } else {
+                tabAdminContent.classList.remove('hidden'); tabAdminContent.classList.add('block');
+                tabUserContent.classList.remove('block'); tabUserContent.classList.add('hidden');
+                
+                navAdmin.classList.add('border-white', 'text-white'); navAdmin.classList.remove('border-transparent', 'text-white/70');
+                navUser.classList.add('border-transparent', 'text-white/70'); navUser.classList.remove('border-white', 'text-white');
+                checkAdminView();
+            }
+        }
+
+        function checkAdminView() {
+            if(isAdminLoggedIn) {
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-scada-box').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-login-box').classList.remove('hidden');
+                document.getElementById('admin-scada-box').classList.add('hidden');
+                document.getElementById('login-error-admin').classList.add('hidden');
+            }
+        }
+
+        function loginAdmin() {
+            const user = document.getElementById('login-username-admin').value;
+            const pass = document.getElementById('login-password-admin').value;
+            if(user === 'admin' && pass === '123456') {
+                isAdminLoggedIn = true;
+                localStorage.setItem('isAdminLoggedIn', 'true'); 
+                document.getElementById('login-password-admin').value = '';
+                checkAdminView();
+            } else {
+                document.getElementById('login-error-admin').classList.remove('hidden');
+            }
+        }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            localStorage.removeItem('isAdminLoggedIn'); 
+            checkAdminView();
+        }
+
+        // ================= CẤU HÌNH GỬI EMAIL HÓA ĐƠN TỰ ĐỘNG (EmailJS - MIỄN PHÍ, KHÔNG CẦN BACKEND) =================
+        // Bước 1: Đăng ký tài khoản miễn phí tại https://www.emailjs.com
+        // Bước 2: Email Services -> Add New Service -> lấy SERVICE ID điền vào EMAILJS_SERVICE_ID
+        // Bước 3: Email Templates -> Create New Template -> lấy TEMPLATE ID điền vào EMAILJS_TEMPLATE_ID
+        //         (Trong Template dùng các biến: {{to_email}} {{to_name}} {{order_id}} {{phone}} {{w1}} {{w2}} {{quantity}} {{distance}} {{address}} {{total}} {{order_time}})
+        // Bước 4: Account -> General -> Public Key -> điền vào EMAILJS_PUBLIC_KEY
+        const EMAILJS_PUBLIC_KEY = 'uvwFJE4bFGyxPArZH';
+        const EMAILJS_SERVICE_ID = 'service_vma7645';
+        const EMAILJS_TEMPLATE_ID = 'template_amsa1w6';
+        const isEmailJsConfigured = () => EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY' && EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID' && EMAILJS_TEMPLATE_ID !== 'YOUR_TEMPLATE_ID';
+        if (window.emailjs && isEmailJsConfigured()) { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); }
+
+        function sendInvoiceEmail(orderData) {
+            if (!window.emailjs || !isEmailJsConfigured()) {
+                console.warn('EmailJS chưa được cấu hình (xem hướng dẫn đầu file JS) - bỏ qua gửi email hóa đơn.');
+                return;
+            }
+            if (!orderData.email) return;
+            const templateParams = {
+                to_email: orderData.email,
+                to_name: orderData.name || 'Quý khách',
+                order_id: orderData.order_id,
+                phone: orderData.phone || '',
+                w1: orderData.w1,
+                w2: orderData.w2,
+                quantity: orderData.quantity,
+                distance: orderData.distance,
+                address: orderData.address,
+                total: (orderData.total || 0).toLocaleString('vi-VN') + 'đ',
+                order_time: orderData.time
+            };
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                .then(() => { console.log('Đã gửi hóa đơn email thành công tới', orderData.email); })
+                .catch((err) => { console.error('Gửi email hóa đơn thất bại:', err); });
+        }
+
+        // ================= KẾT NỐI MQTT & ĐỒNG BỘ =================
         const brokerUrl = 'wss://dfee0c95c0d7400bbffcc096305cdae1.s1.eu.hivemq.cloud:8884/mqtt';
-        const options = {
-            username: 'neuter', password: '12345678', clean: true, connectTimeout: 5000,
-            clientId: 'TDTU_WINCC_' + Math.random().toString(16).substring(2, 8)
-        };
+        const options = { username: 'neuter', password: '12345678', clean: true, connectTimeout: 5000, clientId: 'TDTU_WEB_' + Math.random().toString(16).substring(2, 8) };
 
         const topicOrder = 'tdtu_cafe_factory/order';
         const topicStatus = 'tdtu_cafe_factory/status';
         const topicSyncReq = 'tdtu_cafe_factory/sync_req';
         const topicSyncRes = 'tdtu_cafe_factory/sync_res';
-        const topicHistoryBroadcast = 'tdtu_cafe_factory/history_broadcast';
         const topicClearHistory = 'tdtu_cafe_factory/clear_history';
+        const topicPriceConfig = 'tdtu_cafe_factory/price_config';
+        const topicPendingOrderBase = 'tdtu_cafe_factory/pending_order/';
 
         const client = mqtt.connect(brokerUrl, options);
+        let watchdogTimer; let isPlcOnline = false; let currentMw20 = 0; let orderHistory = [];
+        let priceConfig = { arabica: 500, robusta: 300, ship: 5000 };
+        let pendingOrders = {};
 
-        let watchdogTimer;
-        let isPlcOnline = false;
-        let currentMw20 = 0;
-        let orderHistory = [];
-
-        const statusBadge = document.getElementById('mqtt-status');
-        const plcConnectionBadge = document.getElementById('plc-connection');
-        const lastUpdateTime = document.getElementById('last-update-time');
+        const inpQtyUser = document.getElementById('inp-qty-user'); const inpW1User = document.getElementById('inp-w1-user'); const inpW2User = document.getElementById('inp-w2-user');
+        const inpQtyAdmin = document.getElementById('inp-qty-admin'); const inpW1Admin = document.getElementById('inp-w1-admin'); const inpW2Admin = document.getElementById('inp-w2-admin');
+        const inpErr1Admin = document.getElementById('inp-err1-admin'); const inpErr2Admin = document.getElementById('inp-err2-admin');
         
-        const plcLed = document.getElementById('plc-led');
-        const plcStatusText = document.getElementById('plc-status-text');
-        
-        const sensorLed = document.getElementById('sensor-led');
-        const sensorStatusText = document.getElementById('sensor-status-text');
-        
-        const txtMW20 = document.getElementById('txt-mw20');
-        const txtTarget = document.getElementById('txt-target');
-        const progressBar = document.getElementById('progress-bar');
-        const txtPercent = document.getElementById('txt-percent');
-        
-        const inpQty = document.getElementById('inp-qty');
-        const inpW1 = document.getElementById('inp-w1');
-        const inpW2 = document.getElementById('inp-w2');
-        const inpErr1 = document.getElementById('inp-err1');
-        const inpErr2 = document.getElementById('inp-err2');
+        inpQtyUser.addEventListener('input', () => { updateProgress(currentMw20, 'user'); });
+        inpQtyAdmin.addEventListener('input', () => { updateProgress(currentMw20, 'admin'); });
 
-        const gValve1 = document.getElementById('graphic-valve-1');
-        const gFlow1 = document.getElementById('graphic-flow-1');
-        const gValve2 = document.getElementById('graphic-valve-2');
-        const gFlow2 = document.getElementById('graphic-flow-2');
-        const gValveWeigh = document.getElementById('graphic-valve-weigh');
-        const gFlowWeigh = document.getElementById('graphic-flow-weigh');
-        
-        const gWeighFill = document.getElementById('graphic-weigh-fill');
-        const txtRealtimeWeight = document.getElementById('txt-realtime-weight');
-
-        const rotaryArm = document.getElementById('rotary-arm');
-        const cyl1 = document.getElementById('cyl-1');
-        const cyl2 = document.getElementById('cyl-2');
-        const dynamicBag = document.getElementById('dynamic-bag');
-        const dynamicBagFill = document.getElementById('dynamic-bag-fill');
-        const finalBag = document.getElementById('final-bag');
-
-        inpQty.addEventListener('input', () => { txtTarget.innerText = inpQty.value; updateProgress(currentMw20); });
-
-        function updateProgress(currentVal) {
-            let target = parseInt(inpQty.value) || 1;
+        function updateProgress(currentVal, prefix) {
+            let target = parseInt(document.getElementById(`inp-qty-${prefix === 'user' ? 'user' : 'admin'}`).value) || 1; 
+            if(document.getElementById(`txt-target-${prefix}`)) document.getElementById(`txt-target-${prefix}`).innerText = target;
             let percent = Math.min((currentVal / target) * 100, 100);
-            progressBar.style.width = percent + '%';
-            txtPercent.innerText = percent.toFixed(1) + '%';
+            if(document.getElementById(`progress-bar-${prefix}`)) document.getElementById(`progress-bar-${prefix}`).style.width = percent + '%';
+            if(document.getElementById(`txt-percent-${prefix}`)) document.getElementById(`txt-percent-${prefix}`).innerText = percent.toFixed(1) + '%';
         }
 
-        function toggleValve(valveDom, flowDom, isOpen) {
-            if (isOpen) { valveDom.classList.add('open'); flowDom.classList.add('active'); } 
-            else { valveDom.classList.remove('open'); flowDom.classList.remove('active'); }
+        function toggleValve(v, f, o) { if(v && f) { if(o){v.classList.add('open'); f.classList.add('active');} else {v.classList.remove('open'); f.classList.remove('active');} } }
+        
+        function updateGraphicsAdmin(data, targetRecipeWeight, realtimeWeight) {
+            let prefix = 'admin';
+            let v1 = data.cua_loai_1 === 73; let v2 = data.cua_loai_2 === 73; let vw = data.cua_can === 95;
+            toggleValve(document.getElementById(`graphic-valve-1-${prefix}`), document.getElementById(`graphic-flow-1-${prefix}`), v1);
+            toggleValve(document.getElementById(`graphic-valve-2-${prefix}`), document.getElementById(`graphic-flow-2-${prefix}`), v2);
+            toggleValve(document.getElementById(`graphic-valve-weigh-${prefix}`), document.getElementById(`graphic-flow-weigh-${prefix}`), vw);
+
+            let txtRT = document.getElementById(`txt-realtime-weight-${prefix}`);
+            let fillW = document.getElementById(`graphic-weigh-fill-${prefix}`);
+            if(txtRT) txtRT.innerText = realtimeWeight.toFixed(1) + ' g';
+            if(fillW) fillW.style.height = Math.min(Math.max((realtimeWeight / targetRecipeWeight) * 100, 0), 100) + '%';
+
+            let xl_xoay = data.XL_xoay || false; let xl_ep = data.XL_ep || false; let xl_lay_bao = data.XL_lay_bao || false; let coil_van_hut = data.Coil_van_hut || data.van_hut_1 || false; 
+            let rotaryArm = document.getElementById(`rotary-arm-${prefix}`); let cyl1 = document.getElementById(`cyl-1-${prefix}`); let cyl2 = document.getElementById(`cyl-2-${prefix}`); 
+            let dynamicBag = document.getElementById(`dynamic-bag-${prefix}`); let dynamicBagFill = document.getElementById(`dynamic-bag-fill-${prefix}`);
+
+            if(rotaryArm) { if(xl_xoay) rotaryArm.classList.add('rotated-down'); else rotaryArm.classList.remove('rotated-down'); }
+            if(cyl1) cyl1.className = 'cyl-block' + (xl_lay_bao ? ' push' : ''); 
+            if(cyl2) cyl2.className = 'cyl-block' + (xl_ep ? ' push' : '');
+            
+            if(coil_van_hut && cyl1 && dynamicBag) { cyl1.classList.add('vac-on'); dynamicBag.classList.add('held'); } 
+            else if(cyl1 && dynamicBag) { cyl1.classList.remove('vac-on'); dynamicBag.classList.remove('held'); }
+            
+            if(data.cua_can === 95 && xl_xoay && dynamicBag) {
+                dynamicBag.classList.add('opened');
+                let w = targetRecipeWeight - realtimeWeight; w = w < 0 ? 0 : (w > targetRecipeWeight ? targetRecipeWeight : w);
+                if(dynamicBagFill) dynamicBagFill.style.height = Math.min(Math.max((w / targetRecipeWeight) * 100, 0), 100) + '%';
+            } else if (!xl_xoay && dynamicBag) { dynamicBag.classList.remove('opened'); if(dynamicBagFill) dynamicBagFill.style.height = '0%'; }
         }
 
         client.on('connect', () => {
-            statusBadge.innerText = 'ONLINE'; statusBadge.className = 'text-green-700';
-            client.subscribe([topicStatus, topicSyncRes, topicHistoryBroadcast, topicClearHistory]);
+            document.getElementById('mqtt-status-admin').innerText = 'ONLINE'; document.getElementById('mqtt-status-admin').className = 'text-green-700';
+            client.subscribe([topicStatus, topicSyncRes, topicClearHistory, topicPriceConfig, topicPendingOrderBase + '+']);
             client.publish(topicSyncReq, JSON.stringify({ req: true }));
         });
 
-        client.on('offline', () => { statusBadge.innerText = 'OFFLINE'; statusBadge.className = 'text-red-600'; });
+        client.on('offline', () => { 
+            document.getElementById('mqtt-status-admin').innerText = 'OFFLINE'; document.getElementById('mqtt-status-admin').className = 'text-red-600'; 
+        });
 
         client.on('message', (topic, message) => {
+            const raw = message.toString();
+
+            // Đơn hàng chờ duyệt: dùng MQTT retained, payload rỗng nghĩa là đơn đã được xử lý (xóa khỏi hàng chờ)
+            if (topic.startsWith(topicPendingOrderBase)) {
+                const orderId = topic.substring(topicPendingOrderBase.length);
+                if (raw === '') {
+                    delete pendingOrders[orderId];
+                } else {
+                    try { pendingOrders[orderId] = JSON.parse(raw); } catch(e) {}
+                }
+                renderPendingOrders();
+                return;
+            }
+
+            if (topic === topicPriceConfig) {
+                try {
+                    const p = JSON.parse(raw);
+                    priceConfig = { arabica: parseFloat(p.arabica)||0, robusta: parseFloat(p.robusta)||0, ship: parseFloat(p.ship)||0 };
+                    applyPriceConfigToUI();
+                } catch(e) {}
+                return;
+            }
+
             try {
-                const data = JSON.parse(message.toString());
+                const data = JSON.parse(raw);
                 
-                if (topic === topicSyncRes || topic === topicHistoryBroadcast || topic === topicClearHistory) {
+                if (topic === topicSyncRes || topic === topicClearHistory) {
                     if (data.config) {
-                        inpW1.value = data.config.w1; 
-                        inpW2.value = data.config.w2;
-                        inpQty.value = data.config.qty; 
-                        inpErr1.value = data.config.sai_so_1 || 0.5;
-                        inpErr2.value = data.config.sai_so_2 || 0.5;
-                        txtTarget.innerText = data.config.qty;
+                        inpW1User.value = data.config.w1; inpW2User.value = data.config.w2; inpQtyUser.value = data.config.qty;
+                        inpW1Admin.value = data.config.w1; inpW2Admin.value = data.config.w2; inpQtyAdmin.value = data.config.qty;
+                        inpErr1Admin.value = data.config.sai_so_1 || 0.5; inpErr2Admin.value = data.config.sai_so_2 || 0.5;
+                        
+                        updateProgress(currentMw20, 'user'); updateProgress(currentMw20, 'admin');
                     }
                     if (data.history !== undefined) { orderHistory = data.history; renderHistory(); }
                 }
 
                 if (topic === topicStatus) {
                     resetWatchdog();
-
-                    if (data.mw20 !== undefined) {
-                        currentMw20 = parseInt(data.mw20);
-                        txtMW20.innerText = currentMw20; updateProgress(currentMw20);
+                    
+                    if (data.mw20 !== undefined) { 
+                        currentMw20 = parseInt(data.mw20); 
+                        document.getElementById('txt-mw20-user').innerText = currentMw20; updateProgress(currentMw20, 'user');
+                        document.getElementById('txt-mw20-admin').innerText = currentMw20; updateProgress(currentMw20, 'admin');
                     }
-
+                    
                     if (data.running !== undefined) {
-                        if (data.running) {
-                            plcLed.className = 'w-4 h-4 rounded-full bg-green-500 border-2 border-gray-500 shadow-inner';
-                            plcStatusText.innerText = 'RUNNING'; plcStatusText.className = 'text-green-700 font-bold uppercase';
-                        } else {
-                            plcLed.className = 'w-4 h-4 rounded-full bg-red-600 border-2 border-gray-500 shadow-inner';
-                            plcStatusText.innerText = 'STOPPED'; plcStatusText.className = 'text-red-600 font-bold uppercase';
-                        }
+                        let isRunning = data.running;
+                        document.getElementById('plc-led-admin').className = 'w-4 h-4 rounded-full border-2 shadow-inner ' + (isRunning ? 'bg-green-500 border-gray-500' : 'bg-red-600 border-gray-500');
+                        document.getElementById('plc-status-text-admin').innerText = isRunning ? 'RUNNING' : 'STOPPED';
+                        document.getElementById('plc-status-text-admin').className = 'font-bold uppercase ' + (isRunning ? 'text-green-700' : 'text-red-600');
+                        
+                        document.getElementById('plc-led-user').className = 'w-3 h-3 rounded-full shadow-inner ' + (isRunning ? 'bg-green-500' : 'bg-red-600');
+                        document.getElementById('plc-status-text-user').innerText = isRunning ? 'MÁY ĐANG CHẠY' : 'MÁY DỪNG';
+                        document.getElementById('plc-status-text-user').className = isRunning ? 'text-xs font-bold text-green-600' : 'text-xs font-bold text-red-600';
                     }
                     
-                    // XỬ LÝ ĐÈN TRẠNG THÁI CẢM BIẾN HỒNG NGOẠI (Tag_14)
-                    // (Node-RED cần cấu hình truyền xuống với key là 'Tag_14' hoặc 'I0_2')
                     let tag_14 = data.Tag_14 || data.I0_2 || false;
-                    
-                    if (tag_14) {
-                        // Kích (Có vật cản) -> Sáng màu vàng phát quang cảnh báo
-                        sensorLed.className = 'w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-600 shadow-[0_0_8px_#facc15] transition-colors duration-200';
-                        sensorStatusText.innerText = 'Có Vật Cản';
-                        sensorStatusText.className = 'text-yellow-600 font-bold uppercase';
-                    } else {
-                        // Hở (Trống) -> Màu xám
-                        sensorLed.className = 'w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner transition-colors duration-200';
-                        sensorStatusText.innerText = 'Trống (Hở)';
-                        sensorStatusText.className = 'text-gray-600 font-bold uppercase';
+                    let sLedAdmin = document.getElementById('sensor-led-admin'); let sTxtAdmin = document.getElementById('sensor-status-text-admin');
+                    if (sLedAdmin && sTxtAdmin) {
+                        if(tag_14) { sLedAdmin.className = 'w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-600 shadow-[0_0_8px_#facc15] transition-colors'; sTxtAdmin.innerText = 'Có Vật Cản'; sTxtAdmin.className = 'text-yellow-600 font-bold uppercase'; } 
+                        else { sLedAdmin.className = 'w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner transition-colors'; sTxtAdmin.innerText = 'Trống (Hở)'; sTxtAdmin.className = 'text-gray-600 font-bold uppercase'; }
                     }
 
-                    let v1 = data.cua_loai_1 === 73; 
-                    let v2 = data.cua_loai_2 === 73; 
-                    let vw = data.cua_can === 95;
-                    toggleValve(gValve1, gFlow1, v1); 
-                    toggleValve(gValve2, gFlow2, v2); 
-                    toggleValve(gValveWeigh, gFlowWeigh, vw);
-
-                    const targetRecipeWeight = (parseFloat(inpW1.value) || 0) + (parseFloat(inpW2.value) || 0) || 90.0;
+                    const targetRecipeWeight = (parseFloat(inpW1Admin.value) || 0) + (parseFloat(inpW2Admin.value) || 0) || 90.0;
                     let realtimeWeight = parseFloat(data.current_weight) || 0;
 
-                    if (data.current_weight !== undefined) {
-                        txtRealtimeWeight.innerText = realtimeWeight.toFixed(1) + ' g';
-                        let weighPercent = Math.min(Math.max((realtimeWeight / targetRecipeWeight) * 100, 0), 100);
-                        gWeighFill.style.height = weighPercent + '%';
-                    }
-
-                    let xl_xoay = data.XL_xoay || false;       
-                    let xl_ep = data.XL_ep || false;           
-                    let xl_lay_bao = data.XL_lay_bao || false; 
-                    let coil_van_hut = data.Coil_van_hut || data.van_hut_1 || false; 
-
-                    if(xl_xoay) { rotaryArm.classList.add('rotated-down'); } 
-                    else { rotaryArm.classList.remove('rotated-down'); }
-
-                    cyl1.className = 'cyl-block';
-                    if(xl_lay_bao) { cyl1.classList.add('push'); } 
-                    else { cyl1.classList.remove('push'); }
-
-                    cyl2.className = 'cyl-block';
-                    if(xl_ep) { cyl2.classList.add('push'); } 
-                    else { cyl2.classList.remove('push'); }
-
-                    if(coil_van_hut) {
-                        cyl1.classList.add('vac-on');      
-                        dynamicBag.classList.add('held');  
-                    } else {
-                        cyl1.classList.remove('vac-on');
-                        dynamicBag.classList.remove('held');
-                    }
-
-                    if(vw && xl_xoay) {
-                        dynamicBag.classList.add('opened');
-                        let dischargedWeight = targetRecipeWeight - realtimeWeight;
-                        if (dischargedWeight < 0) dischargedWeight = 0;
-                        if (dischargedWeight > targetRecipeWeight) dischargedWeight = targetRecipeWeight;
-                        let bagPercent = Math.min(Math.max((dischargedWeight / targetRecipeWeight) * 100, 0), 100);
-                        dynamicBagFill.style.height = bagPercent + '%';
-                    } else if (!xl_xoay) {
-                        dynamicBag.classList.remove('opened');
-                        dynamicBagFill.style.height = '0%';
-                    }
+                    // Chỉ vẽ đồ họa SCADA cho tab Admin
+                    updateGraphicsAdmin(data, targetRecipeWeight, realtimeWeight);
                 }
-            } catch (e) { console.error("Lỗi phân tích JSON:", e); }
+            } catch (e) {}
         });
 
         function resetWatchdog() {
             clearTimeout(watchdogTimer);
-            if (!isPlcOnline) { isPlcOnline = true; plcConnectionBadge.innerText = 'ONLINE'; plcConnectionBadge.className = 'text-green-700'; }
-            lastUpdateTime.innerText = new Date().toLocaleTimeString('vi-VN');
+            if (!isPlcOnline) { isPlcOnline = true; document.getElementById('plc-connection-admin').innerText = 'ONLINE'; document.getElementById('plc-connection-admin').className = 'text-green-700'; }
+            document.getElementById('last-update-time-admin').innerText = new Date().toLocaleTimeString('vi-VN');
             watchdogTimer = setTimeout(() => {
-                isPlcOnline = false; plcConnectionBadge.innerText = 'COMM ERROR'; plcConnectionBadge.className = 'text-red-600 animate-pulse';
-                plcLed.className = 'w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner';
-                plcStatusText.innerText = 'UNKNOWN'; plcStatusText.className = 'text-gray-600 font-bold uppercase';
+                isPlcOnline = false; document.getElementById('plc-connection-admin').innerText = 'COMM ERROR'; document.getElementById('plc-connection-admin').className = 'text-red-600 animate-pulse';
+                document.getElementById('plc-led-admin').className = 'w-4 h-4 rounded-full bg-gray-500 border-2 border-gray-600 shadow-inner';
+                document.getElementById('plc-status-text-admin').innerText = 'UNKNOWN'; document.getElementById('plc-status-text-admin').className = 'text-gray-600 font-bold uppercase';
             }, 6000);
         }
 
-        function sendControl(startFlag, stopFlag, resetFlag) {
-            if (!isPlcOnline) console.warn("PLC Offline. Lệnh bị hủy.");
-            const w1Val = parseFloat(inpW1.value) || 0.0; 
-            const w2Val = parseFloat(inpW2.value) || 0.0; 
-            const err1Val = parseFloat(inpErr1.value) || 0.0;
-            const err2Val = parseFloat(inpErr2.value) || 0.0;
-            const qtyVal = parseInt(inpQty.value) || 0;
-            
-            client.publish(topicOrder, JSON.stringify({ 
-                start: startFlag, 
-                stop: stopFlag, 
-                reset: resetFlag, 
-                w1: w1Val, 
-                w2: w2Val, 
-                sai_so_1: err1Val,
-                sai_so_2: err2Val,
-                quantity: qtyVal 
-            }));
+        // ================= CÀI ĐẶT GIÁ BÁN (ADMIN) - ĐỒNG BỘ USER QUA MQTT RETAINED =================
+        function applyPriceConfigToUI() {
+            const a1 = document.getElementById('txt-price-arabica-user'); if(a1) a1.innerText = priceConfig.arabica.toLocaleString('vi-VN');
+            const a2 = document.getElementById('txt-price-robusta-user'); if(a2) a2.innerText = priceConfig.robusta.toLocaleString('vi-VN');
+            const a3 = document.getElementById('txt-price-ship-user'); if(a3) a3.innerText = priceConfig.ship.toLocaleString('vi-VN');
+
+            const pA = document.getElementById('inp-price-arabica-admin'); if(pA && document.activeElement !== pA) pA.value = priceConfig.arabica;
+            const pR = document.getElementById('inp-price-robusta-admin'); if(pR && document.activeElement !== pR) pR.value = priceConfig.robusta;
+            const pS = document.getElementById('inp-price-ship-admin'); if(pS && document.activeElement !== pS) pS.value = priceConfig.ship;
         }
 
-        function clearHistory() {
-            if (confirm("Bạn có chắc chắn muốn xóa toàn bộ nhật ký vận hành trên toàn hệ thống không?")) {
-                client.publish(topicClearHistory, JSON.stringify({ command: "CLEAR_HISTORY" }));
+        function updatePriceAdmin() {
+            if (!isAdminLoggedIn) { alert("Bạn phải đăng nhập tài khoản Admin."); return; }
+            const arabica = parseFloat(document.getElementById('inp-price-arabica-admin').value) || 0;
+            const robusta = parseFloat(document.getElementById('inp-price-robusta-admin').value) || 0;
+            const ship = parseFloat(document.getElementById('inp-price-ship-admin').value) || 0;
+            priceConfig = { arabica, robusta, ship };
+            client.publish(topicPriceConfig, JSON.stringify(priceConfig), { retain: true, qos: 1 });
+            applyPriceConfigToUI();
+            alert("✅ Đã cập nhật giá bán và đồng bộ ngay cho khách hàng!");
+        }
+
+        // ================= ĐƠN HÀNG CHỜ DUYỆT (ADMIN XÁC NHẬN TRƯỚC KHI MÁY CHẠY) =================
+        function renderPendingOrders() {
+            const tbody = document.getElementById('pending-order-table-body');
+            const countBadge = document.getElementById('pending-count-admin');
+            if (!tbody) return;
+            const ids = Object.keys(pendingOrders);
+
+            if (countBadge) {
+                if (ids.length > 0) { countBadge.innerText = ids.length; countBadge.classList.remove('hidden'); }
+                else { countBadge.classList.add('hidden'); }
             }
-        }
 
-        function renderHistory() {
-            const tbody = document.getElementById('history-table-body');
-            tbody.innerHTML = '';
-            if (orderHistory.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500 italic">Chưa có bản ghi vận hành nào.</td></tr>';
+            if (ids.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="px-4 py-6 text-center text-gray-500 italic">Không có đơn hàng nào chờ duyệt.</td></tr>';
                 return;
             }
-            orderHistory.forEach(order => {
-                let badge = '';
-                if(order.command === 'START') badge = '<span class="bg-green-200 text-green-800 border border-green-400 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-play mr-1"></i> START</span>';
-                else if(order.command === 'STOP') badge = '<span class="bg-red-200 text-red-800 border border-red-400 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-stop mr-1"></i> STOP</span>';
-                else badge = '<span class="bg-blue-200 text-blue-800 border border-blue-400 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-rotate-right mr-1"></i> RESET</span>';
 
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-[#f5f5f5] transition-colors';
-                tr.innerHTML = `
-                    <td class="px-4 py-2 font-numbers text-xs text-gray-600 border-r border-gray-200">${order.time}</td>
-                    <td class="px-4 py-2 border-r border-gray-200">${badge}</td>
-                    <td class="px-4 py-2 font-numbers text-base text-center font-bold text-gray-800 border-r border-gray-200">${order.w1}</td>
-                    <td class="px-4 py-2 font-numbers text-base text-center font-bold text-gray-800 border-r border-gray-200">${order.w2}</td>
-                    <td class="px-4 py-2 font-numbers text-base text-center font-bold text-orange-700 border-r border-gray-200">${order.sai_so_1 ?? 0}</td>
-                    <td class="px-4 py-2 font-numbers text-base text-center font-bold text-orange-700 border-r border-gray-200">${order.sai_so_2 ?? 0}</td>
-                    <td class="px-4 py-2 font-numbers text-base text-center font-bold text-blue-700 border-r border-gray-200">${order.qty}</td>
-                    <td class="px-4 py-2 text-right"><i class="fa-solid fa-check-double text-green-600"></i> <span class="text-xs text-gray-500 ml-1">Đồng Bộ</span></td>
-                `;
+            ids.sort((a, b) => (pendingOrders[a].time_raw || 0) - (pendingOrders[b].time_raw || 0));
+            tbody.innerHTML = '';
+            ids.forEach(id => {
+                const o = pendingOrders[id];
+                const tr = document.createElement('tr'); tr.className = 'hover:bg-[#f5f5f5] transition-colors';
+                tr.innerHTML = `<td class="px-4 py-2 font-numbers text-xs text-gray-600 border-r">${o.time}</td>
+                                <td class="px-4 py-2 text-xs border-r max-w-[160px]" title="${o.email || ''}">
+                                    <div class="font-bold text-gray-800 truncate">${o.name || '(không rõ)'}</div>
+                                    <div class="text-gray-500 truncate">${o.phone || ''}</div>
+                                </td>
+                                <td class="px-4 py-2 text-xs border-r max-w-[200px] truncate" title="${o.address}">${o.address}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold border-r">${o.w1}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold border-r">${o.w2}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold text-blue-700 border-r">${o.quantity}</td>
+                                <td class="px-4 py-2 font-numbers text-center border-r">${o.distance}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold text-red-600 border-r">${(o.total||0).toLocaleString('vi-VN')}đ</td>
+                                <td class="px-4 py-2 text-center"><div class="flex gap-1 justify-center">
+                                    <button onclick="approveOrder('${id}')" class="btn-scada btn-start px-2 py-1 text-xs"><i class="fa-solid fa-check"></i> Duyệt</button>
+                                    <button onclick="rejectOrder('${id}')" class="btn-scada btn-stop px-2 py-1 text-xs"><i class="fa-solid fa-xmark"></i> Từ chối</button>
+                                </div></td>`;
                 tbody.appendChild(tr);
             });
         }
 
+        function approveOrder(id) {
+            if (!isAdminLoggedIn) { alert("Bạn phải đăng nhập tài khoản Admin."); return; }
+            const o = pendingOrders[id];
+            if (!o) return;
+
+            // Admin duyệt đơn -> gửi lệnh START thật cho PLC, dùng sai số cân hiện tại của Admin
+            client.publish(topicOrder, JSON.stringify({
+                start: true, stop: false, reset: false,
+                w1: o.w1, w2: o.w2, quantity: o.quantity,
+                sai_so_1: parseFloat(inpErr1Admin.value)||0, sai_so_2: parseFloat(inpErr2Admin.value)||0,
+                distance: o.distance, address: o.address
+            }));
+
+            // Xóa đơn khỏi hàng chờ (retained rỗng)
+            client.publish(topicPendingOrderBase + id, '', { retain: true });
+            delete pendingOrders[id];
+            renderPendingOrders();
+        }
+
+        function rejectOrder(id) {
+            if (!isAdminLoggedIn) { alert("Bạn phải đăng nhập tài khoản Admin."); return; }
+            if (!confirm("Từ chối đơn hàng này? Máy sẽ KHÔNG chạy cho đơn này.")) return;
+            client.publish(topicPendingOrderBase + id, '', { retain: true });
+            delete pendingOrders[id];
+            renderPendingOrders();
+        }
+
+        // ================= GỬI ĐƠN HÀNG & MÃ QR THẬT (VIETQR MỚI NHẤT) =================
+        function processOrderUser() {
+            const w1 = parseFloat(inpW1User.value)||0;
+            const w2 = parseFloat(inpW2User.value)||0;
+            const qty = parseInt(inpQtyUser.value)||0;
+            const name = document.getElementById('inp-name-user').value.trim();
+            const phone = document.getElementById('inp-phone-user').value.trim();
+            const email = document.getElementById('inp-email-user').value.trim();
+            const address = document.getElementById('inp-address-user').value.trim();
+            const distRaw = document.getElementById('inp-distance-user').value;
+            const dist = parseFloat(distRaw)||0;
+
+            if(!name || !phone || !email) {
+                alert("Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Email để nhận hóa đơn!");
+                return;
+            }
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(!emailPattern.test(email)) {
+                alert("Email không hợp lệ, vui lòng kiểm tra lại!");
+                return;
+            }
+            const phonePattern = /^[0-9]{9,11}$/;
+            if(!phonePattern.test(phone)) {
+                alert("Số điện thoại không hợp lệ, vui lòng nhập 9-11 chữ số!");
+                return;
+            }
+            if(!address || distRaw === "Đang tính..." || distRaw === "") {
+                alert("Vui lòng chọn địa chỉ giao hàng, tìm vị trí tự động, hoặc đợi hệ thống tính khoảng cách (km) trước khi thanh toán!");
+                return;
+            }
+
+            // Tính tiền theo đơn giá do Admin cài đặt (đồng bộ realtime qua MQTT). Cộng thêm Phí Ship theo km. Tất cả nhân số gói.
+            const total = ((w1 * priceConfig.arabica) + (w2 * priceConfig.robusta)) * qty + Math.round((dist * priceConfig.ship));
+            
+            // Render nội dung hóa đơn
+            document.getElementById('bill-name').innerText = name;
+            document.getElementById('bill-phone').innerText = phone;
+            document.getElementById('bill-email').innerText = email;
+            document.getElementById('bill-w1').innerText = w1;
+            document.getElementById('bill-w2').innerText = w2;
+            document.getElementById('bill-qty').innerText = qty;
+            document.getElementById('bill-dist').innerText = dist;
+            document.getElementById('bill-total').innerText = total.toLocaleString('vi-VN');
+
+            // TẠO MÃ VIETQR THẬT ĐÃ FIX LỖI "invalid acqId"
+            // Vietcombank có mã BIN là 970436. Đổi tham số accountNo thành STK của bạn. Đổi đuôi thành .png
+            const bankId = "970436"; 
+            const accountNo = "1016610999"; 
+            const accountName = "DO HUYNH THIEN";
+            const content = "Thanh toan TDTU SCADA"; 
+            
+            const qrUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-compact2.png?amount=${total}&addInfo=${encodeURIComponent(content)}&accountName=${encodeURIComponent(accountName)}`;
+            
+            document.getElementById('qr-loading').classList.remove('hidden');
+            document.getElementById('qr-image').src = qrUrl;
+
+            // Hiện popup QR
+            document.getElementById('qr-modal').classList.remove('hidden');
+            document.getElementById('qr-modal').classList.add('flex');
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').classList.add('hidden');
+            document.getElementById('qr-modal').classList.remove('flex');
+        }
+
+        function confirmPaymentAndSend() {
+            const w1 = parseFloat(inpW1User.value)||0;
+            const w2 = parseFloat(inpW2User.value)||0;
+            const qty = parseInt(inpQtyUser.value)||0;
+            const name = document.getElementById('inp-name-user').value.trim();
+            const phone = document.getElementById('inp-phone-user').value.trim();
+            const email = document.getElementById('inp-email-user').value.trim();
+            const dist = parseFloat(document.getElementById('inp-distance-user').value)||0;
+            const address = document.getElementById('inp-address-user').value.trim();
+            const total = ((w1 * priceConfig.arabica) + (w2 * priceConfig.robusta)) * qty + Math.round((dist * priceConfig.ship));
+
+            // YÊU CẦU: THANH TOÁN XONG -> ĐƠN VÀO HÀNG CHỜ, ADMIN DUYỆT MỚI GỬI LỆNH START THẬT CHO PLC
+            const orderId = 'ORD' + Date.now() + Math.floor(Math.random()*1000);
+            const orderData = {
+                time: new Date().toLocaleString('vi-VN'), time_raw: Date.now(),
+                name: name, phone: phone, email: email,
+                w1: w1, w2: w2, quantity: qty, distance: dist, address: address, total: total
+            };
+            client.publish(topicPendingOrderBase + orderId, JSON.stringify(orderData), { retain: true, qos: 1 });
+
+            // TỰ ĐỘNG GỬI HÓA ĐƠN VỀ EMAIL NGAY KHI THANH TOÁN THÀNH CÔNG
+            sendInvoiceEmail({ ...orderData, order_id: orderId });
+
+            closeQRModal();
+            alert("✅ Xác nhận thanh toán thành công! Hóa đơn đã được gửi về email " + email + ". Đơn hàng đã được gửi tới Admin để DUYỆT, máy sẽ chạy ngay sau khi Admin xác nhận đơn.");
+        }
+
+        // ================= ĐIỀU KHIỂN (ADMIN TOÀN QUYỀN) =================
+        function sendControlAdmin(startFlag, stopFlag, resetFlag) {
+            if (!isAdminLoggedIn) { alert("Bạn phải đăng nhập tài khoản Admin."); return; }
+            client.publish(topicOrder, JSON.stringify({ 
+                start: startFlag, stop: stopFlag, reset: resetFlag, 
+                w1: parseFloat(inpW1Admin.value)||0, w2: parseFloat(inpW2Admin.value)||0, 
+                sai_so_1: parseFloat(inpErr1Admin.value)||0, sai_so_2: parseFloat(inpErr2Admin.value)||0, 
+                quantity: parseInt(inpQtyAdmin.value)||0 
+            }));
+        }
+
+        // ================= LỊCH SỬ =================
+        function clearHistory() { if (confirm("Xóa toàn bộ lịch sử?")) { client.publish(topicClearHistory, JSON.stringify({ command: "CLEAR_HISTORY" })); } }
+
+        function renderHistory() {
+            const tbody = document.getElementById('history-table-body'); if(!tbody) return;
+            tbody.innerHTML = '';
+            if (orderHistory.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500 italic">Chưa có bản ghi vận hành nào.</td></tr>'; return; }
+            orderHistory.forEach(order => {
+                let badge = order.command === 'START' ? '<span class="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-bold">START</span>' : 
+                            order.command === 'STOP' ? '<span class="bg-red-200 text-red-800 px-2 py-1 rounded text-xs font-bold">STOP</span>' : 
+                            '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded border border-blue-300 text-xs font-bold">KHÁCH ĐẶT HÀNG</span>';
+                if(order.command === 'RESET') badge = '<span class="bg-blue-200 text-blue-800 px-2 py-1 rounded text-xs font-bold">RESET</span>';
+                
+                const tr = document.createElement('tr'); tr.className = 'hover:bg-[#f5f5f5] transition-colors';
+                tr.innerHTML = `<td class="px-4 py-2 font-numbers text-xs text-gray-600 border-r">${order.time}</td>
+                                <td class="px-4 py-2 border-r">${badge}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold border-r">${order.w1}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold border-r">${order.w2}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold text-orange-700 border-r">${order.sai_so_1 ?? 0}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold text-orange-700 border-r">${order.sai_so_2 ?? 0}</td>
+                                <td class="px-4 py-2 font-numbers text-center font-bold text-blue-700 border-r">${order.qty}</td>
+                                <td class="px-4 py-2 text-right"><i class="fa-solid fa-check-double text-green-600"></i></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        
         function exportCSV() {
-            if (orderHistory.length === 0) { alert("Không có dữ liệu lịch sử để xuất báo cáo!"); return; }
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFFThời gian,Hành động,W1 (g),W2 (g),Sai số 1,Sai số 2,Mục tiêu (Gói)\n";
+            if (orderHistory.length === 0) return;
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFThời gian,Hành động,W1,W2,Sai số 1,Sai số 2,Mục tiêu\n";
             orderHistory.forEach(row => { csvContent += `"${row.time}",${row.command},${row.w1},${row.w2},${row.sai_so_1 ?? 0},${row.sai_so_2 ?? 0},${row.qty}\n`; });
-            const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
-            link.setAttribute("download", `BaoCao_VanHanh_TDTU_Cafe_${new Date().getTime()}.csv`);
-            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `LichSu_MayDongGoi_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
     </script>
 </body>
